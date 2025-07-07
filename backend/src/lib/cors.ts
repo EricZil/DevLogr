@@ -1,9 +1,32 @@
 import cors from 'cors';
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+// Define allowed origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://devlogr.eryxks.cloud',
+  process.env.FRONTEND_URL,
+].filter(Boolean); // Remove any undefined values
+
 // Initialize CORS middleware with options
 const corsMiddleware = cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Allow requests from the frontend
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is in our allowed list
+    if (allowedOrigins.some(allowedOrigin => allowedOrigin && origin.startsWith(allowedOrigin))) {
+      return callback(null, true);
+    }
+    
+    // Also allow any *.vercel.app domain for deployment previews
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Block the request
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Allowed methods
   credentials: true, // Allow cookies to be sent
   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
