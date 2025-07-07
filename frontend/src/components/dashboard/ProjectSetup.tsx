@@ -135,20 +135,13 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
       clearTimeout(debounceTimer);
     }
 
-    // Reset availability state while user is typing
-    setDomainAvailable(null);
-    setIsDomainChecking(false);
-
-    // Only check if domain is valid
-    if (!domain || !isValidDomain(domain)) return;
-
     // Set new timer
     const timer = setTimeout(() => {
       checkCustomDomain(domain);
     }, 500);
 
     setDebounceTimer(timer);
-  }, [debounceTimer]);
+  }, [debounceTimer, checkCustomDomain]);
 
   if (!isOpen) return null;
 

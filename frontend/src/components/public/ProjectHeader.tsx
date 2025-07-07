@@ -29,12 +29,9 @@ export default function ProjectHeader({ projectData, subdomain, onIssueClick, on
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">{projectData.title}</h1>
-              <a 
-                href={`/projects/${subdomain}`}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors duration-200"
-              >
-                {subdomain}.devlogr.com
-              </a>
+              <div className="text-sm text-blue-400">
+                {subdomain}.devlogr.space
+              </div>
             </div>
           </div>
           

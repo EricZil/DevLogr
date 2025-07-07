@@ -74,7 +74,6 @@ model User {
   // DevLogr Features
   projects     Project[]
   sessions     Session[]
-  apiKeys      ApiKey[]
   taskComments TaskComment[]
   timeEntries  TimeEntry[]
   issueComments IssueComment[]
@@ -123,28 +122,7 @@ model Session {
   @@map("sessions")
 }
 
-model ApiKey {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String   // User-friendly name for the API key
-  
-  // SECURITY: The key should be hashed before being stored in the database.
-  // Do not store the raw API key.
-  key         String   @unique
-  
-  permissions String   @db.Text // JSON array of permissions
-  
-  lastUsed    DateTime?
-  expiresAt   DateTime?
-  isActive    Boolean  @default(true)
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@map("api_keys")
-}
+
 
 // ===========================
 // DEVLOGR PROJECT MODELS
@@ -429,24 +407,8 @@ model ProjectTag {
 }
 
 // ===========================
-// SYSTEM MODELS
+// ISSUE & FEEDBACK MODELS
 // ===========================
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?  // null for system actions
-  action    String   // e.g., "user.login", "project.create"
-  resource  String?  // resource ID that was affected
-  details   String?  @db.Text // JSON details
-  ipAddress String?
-  userAgent String?  @db.Text
-  
-  createdAt DateTime @default(now())
-  
-  @@map("audit_logs")
-}
-
-// INSERT NEW ENUMS AND MODEL BELOW AUDITLOG
 
 enum IssueStatus {
   OPEN
