@@ -95,10 +95,9 @@ class ApiService {
     options: RequestInit = {},
     skipAuth = false
   ): Promise<ApiResponse<T>> {
-    // If API_BASE is defined (for local dev), use it.
-    // Otherwise (for production), use a relative path for the Next.js proxy.
-    const finalEndpoint = `/api${endpoint}`;
-    const url = API_BASE ? `${API_BASE}${finalEndpoint}` : finalEndpoint;
+    // Always use the backend API URL - either from env var or default
+    const apiBase = API_BASE || 'https://api.devlogr.eryxks.cloud';
+    const url = `${apiBase}/api${endpoint}`;
     
     // Use the standard Headers object for type safety and correctness.
     const headers = new Headers(options.headers);
