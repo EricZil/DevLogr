@@ -46,15 +46,11 @@ export default function IssueModal({ isOpen, onClose, projectTitle, projectSlug,
 
     try {
       setIsSubmitting(true);
-      // Retrieve API key for optional authentication
-      const apiKeyRes = await fetch('/api/config');
-      const { apiKey } = await apiKeyRes.json();
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/public/projects/${encodeURIComponent(projectSlug)}/issues`, {
+      // Public endpoint doesn't need authentication
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=create-issue&slug=${encodeURIComponent(projectSlug)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(apiKey ? { 'X-API-Key': apiKey } : {})
         },
         body: JSON.stringify({
           title: formData.title.trim(),
