@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 export class AppError extends Error {
   public readonly statusCode: number;

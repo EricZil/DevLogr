@@ -42,7 +42,7 @@ export async function updateMilestoneProgress(milestoneId: string) {
   }
   let totalWeight = 0;
   let completedWeight = 0;
-  const statusWeights = {
+  const statusWeights: Record<string, number> = {
     TODO: 0,
     IN_PROGRESS: 0.3,
     IN_REVIEW: 0.8,
@@ -56,7 +56,7 @@ export async function updateMilestoneProgress(milestoneId: string) {
     totalWeight += weight;
     let taskCompletion = statusWeights[task.status] || 0;
     if (task.subtasks.length > 0) {
-      const completedSubtasks = task.subtasks.filter((st) => st.completed).length;
+      const completedSubtasks = task.subtasks.filter((st: any) => st.completed).length;
       const subtaskProgress = completedSubtasks / task.subtasks.length;
       if (task.status === "TODO") taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.4);
       else if (task.status === "IN_PROGRESS") taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.7);

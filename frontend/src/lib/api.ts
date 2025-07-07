@@ -91,8 +91,8 @@ class ApiService {
     options: RequestInit = {},
     skipAuth = false
   ): Promise<ApiResponse<T>> {
-    const finalEndpoint = `/api${endpoint}`;
-    const url = API_BASE ? `${API_BASE}${finalEndpoint}` : finalEndpoint;
+    const apiBase = API_BASE || 'https://api.devlogr.eryxks.cloud';
+    const url = `${apiBase}/api${endpoint}`;
     const headers = new Headers(options.headers);
 
     if (!headers.has('Content-Type')) {

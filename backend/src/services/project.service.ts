@@ -1,7 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../lib/error-handler";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 
 function generateSlug(name: string): string {
   return name
@@ -157,7 +156,7 @@ export async function getProjectTags(projectId: string, userId: string) {
         where: { projectId },
         include: { tag: true }
     });
-    return projectTags.map(pt => pt.tag);
+    return projectTags.map((pt: any) => pt.tag);
 }
 
 export async function updateProjectBasicInfo(

@@ -42,7 +42,7 @@ export async function getUpdatesForProject(projectId: string, userId: string) {
     where: { projectId },
     orderBy: { createdAt: "desc" },
   });
-  return updates.map((u) => ({
+  return updates.map((u: any) => ({
     ...u,
     images: u.images ? (JSON.parse(u.images) as string[]) : null,
   }));
@@ -76,7 +76,7 @@ export async function getRecentUpdates(userId: string, limit: number = 5) {
     orderBy: { createdAt: "desc" },
     take: Math.max(1, Math.min(limit, 20)),
   });
-  return updates.map((u) => ({
+  return updates.map((u: any) => ({
     id: u.id,
     projectId: u.projectId,
     projectTitle: u.project.title,
@@ -126,9 +126,9 @@ export async function getUpdateStats(projectId: string, userId: string) {
         where: { projectId },
         _count: { _all: true },
     });
-    const total = types.reduce((sum, t) => sum + t._count._all, 0);
+    const total = types.reduce((sum: number, t: any) => sum + t._count._all, 0);
     const counts: Record<string, number> = {};
-    types.forEach((t) => {
+    types.forEach((t: any) => {
       counts[t.type] = t._count._all;
     });
     return { total, counts };
