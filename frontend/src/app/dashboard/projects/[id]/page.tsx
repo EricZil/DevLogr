@@ -42,7 +42,7 @@ interface Project {
 
 type TabType = 'overview' | 'settings' | 'milestones' | 'updates' | 'issues' | 'feedback';
 
-type ApiWithKey = { getApiKey: () => Promise<string>; };
+
 
 export default function ProjectManagement() {
   const [project, setProject] = useState<Project | null>(null);
@@ -88,7 +88,7 @@ export default function ProjectManagement() {
         }
       } catch (error) {
         console.error('Failed to fetch project:', error);
-        setError('smth went 404');
+        setError('An unexpected error occurred');
       } finally {
         setLoading(false);
       }
@@ -103,14 +103,12 @@ export default function ProjectManagement() {
     setSaving(true);
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=basic-info`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify(data)
@@ -140,14 +138,12 @@ export default function ProjectManagement() {
     setSaving(true);
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify(data)
@@ -171,14 +167,12 @@ export default function ProjectManagement() {
     setSaving(true);
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/timeline`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=timeline`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify(data)
@@ -201,12 +195,10 @@ export default function ProjectManagement() {
   const fetchProjectTags = useCallback(async () => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/tags`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=tags`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -223,12 +215,10 @@ export default function ProjectManagement() {
   const fetchPopularTags = useCallback(async () => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tags/popular`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tags?action=popular`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -245,14 +235,12 @@ export default function ProjectManagement() {
   const addTag = async (tagName: string) => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/tags`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=tags`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify({ tagName })
@@ -274,13 +262,11 @@ export default function ProjectManagement() {
   const removeTag = async (tagId: string) => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/tags/${tagId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=tags&tagId=${tagId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
