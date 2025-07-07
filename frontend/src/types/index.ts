@@ -128,6 +128,3 @@ export interface Comment {
   }
 }
 
-export type ApiWithKey = {
-  getApiKey: () => Promise<string>;
-}; 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
-import { Milestone, ApiWithKey } from '@/types';
+import { Milestone } from '@/types';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -87,7 +87,6 @@ export default function AddTaskModal({
 
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
       const taskData = {
         title: newTask.title.trim(),
@@ -98,12 +97,11 @@ export default function AddTaskModal({
         dueDate: newTask.dueDate || null
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones/${newTask.milestoneId}/tasks`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones?id=${newTask.milestoneId}&action=tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify(taskData)

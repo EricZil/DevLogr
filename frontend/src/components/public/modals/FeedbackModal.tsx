@@ -22,16 +22,12 @@ export default function FeedbackModal({ isOpen, onClose, projectTitle, projectSl
     e.preventDefault();
 
     try {
-      const apiKeyRes = await fetch('/api/config');
-      const { apiKey } = await apiKeyRes.json();
-
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/public/projects/${encodeURIComponent(projectSlug)}/feedback`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=create-feedback&slug=${encodeURIComponent(projectSlug)}`;
 
       const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify({

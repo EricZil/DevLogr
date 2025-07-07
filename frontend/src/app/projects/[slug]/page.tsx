@@ -35,11 +35,10 @@ export default function ProjectPage() {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        const apiKey = await (fetch('/api/config').then(res => res.json()).then(data => data.apiKey));
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/public/${encodeURIComponent(slug)}`, {
+        // Public endpoints don't need authentication
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=project&slug=${encodeURIComponent(slug)}`, {
           headers: {
             'Content-Type': 'application/json',
-            'X-API-Key': apiKey,
           },
           credentials: 'include',
         });
@@ -50,10 +49,9 @@ export default function ProjectPage() {
           setError(null);
 
           try {
-            const issuesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/public/projects/${encodeURIComponent(slug)}/issues`, {
+            const issuesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=issues&slug=${encodeURIComponent(slug)}`, {
               headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': apiKey,
               },
               credentials: 'include',
             });

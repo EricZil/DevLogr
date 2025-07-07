@@ -86,10 +86,8 @@ export default function IssuesTab({ issues, projectSlug }: IssuesTabProps) {
   const fetchComments = async (issueId: string) => {
     if (!projectSlug) return;
     try {
-      const apiKeyRes = await fetch('/api/config');
-      const { apiKey } = await apiKeyRes.json();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/public/issues/${issueId}/comments`, {
-        headers: { 'X-API-Key': apiKey },
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=issue-comments&issueId=${issueId}`, {
+        headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         const data = await res.json();
