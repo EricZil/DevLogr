@@ -23,12 +23,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  if (url.pathname.startsWith('/api/')) {
-    console.log(`Proxying API call: ${BACKEND_URL}${url.pathname}`)
-    const backendUrl = new URL(url.pathname + url.search, BACKEND_URL)
-    return NextResponse.rewrite(backendUrl)
-  }
-
   if (isCustomDomain || subdomain) {
     const domain = isCustomDomain ? hostname : subdomain
     console.log(`domain detected: ${domain}`)
