@@ -124,7 +124,7 @@ export default function PublicProjectPage() {
               <li>Deleted or moved</li>
               <li>Not properly configured</li>
               {domainInfo.type === 'subdomain' && (
-                <li>The subdomain "{identifier}" doesn't have a project associated with it</li>
+                <li>The subdomain &quot;{identifier}&quot; doesn&apos;t have a project associated with it</li>
               )}
             </ul>
           </div>
