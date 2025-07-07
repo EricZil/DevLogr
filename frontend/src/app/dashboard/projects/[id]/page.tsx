@@ -69,7 +69,7 @@ export default function ProjectManagement() {
         const token = api.getAccessToken();
         const apiKey = await (api as unknown as ApiWithKey).getApiKey();
         
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/basic`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=basic`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -107,7 +107,7 @@ export default function ProjectManagement() {
       const token = api.getAccessToken();
       const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/basic-info`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=basic-info`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

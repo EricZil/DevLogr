@@ -55,7 +55,7 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/updates`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?projectId=${projectId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -85,7 +85,7 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/updates/stats`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?projectId=${projectId}&action=stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -120,7 +120,7 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/updates`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?projectId=${projectId}`,
         {
           method: 'POST',
           headers: {
