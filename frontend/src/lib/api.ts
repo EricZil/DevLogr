@@ -69,19 +69,15 @@ class ApiService {
         return false;
       }
 
-      console.log('🔄 Attempting automatic token refresh...');
       const response = await this.refreshToken();
       
       if (response.success && response.data) {
         this.saveTokens(response.data.tokens);
-        console.log('✅ Token refreshed automatically');
         return true;
       }
       
-      console.log('❌ Token refresh failed');
       return false;
     } catch (error) {
-      console.error('Token refresh error:', error);
       return false;
     }
   }
@@ -91,7 +87,7 @@ class ApiService {
     options: RequestInit = {},
     skipAuth = false
   ): Promise<ApiResponse<T>> {
-    const apiBase = API_BASE || 'https://api.devlogr.eryxks.cloud';
+    const apiBase = API_BASE || 'https://api.devlogr.space';
     const url = `${apiBase}/api${endpoint}`;
     const headers = new Headers(options.headers);
 
@@ -113,7 +109,6 @@ class ApiService {
 
       const data = await response.json();
       if (!skipAuth && response.status === 401 && (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_ACCESS_TOKEN')) {
-        console.log('🔄 Access token expired or invalid, attempting refresh...');
         const refreshSuccess = await this.attemptTokenRefresh();
         
         if (refreshSuccess) {

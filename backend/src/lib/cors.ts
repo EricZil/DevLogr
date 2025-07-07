@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://devlogr.eryxks.cloud',
+  'https://devlogr.space',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
