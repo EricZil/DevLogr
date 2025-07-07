@@ -9,7 +9,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    esmExternals: 'loose',
+  },
   webpack: (config, { isServer }) => {
+    // Handle ES module compatibility
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
+    };
+    
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
