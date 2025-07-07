@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/lib/error-handler";
+import { prisma } from "../lib/prisma";
+import { AppError } from "../lib/error-handler";
 
 /**
  * Gets a user's profile from the database.
