@@ -1,0 +1,539 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================
+// USER AUTHENTICATION MODELS
+// ===========================
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  GITHUB
+}
+
+model User {
+  id          String     @id @default(cuid())
+  email       String     @unique
+  username    String?    @unique
+  name        String?
+  bio         String?    @db.Text
+  avatar      String?    // URL to avatar image
+  location    String?
+  website     String?
+  
+  // Authentication
+  password    String?    // null for OAuth users
+  role        UserRole   @default(USER)
+  status      UserStatus @default(PENDING_VERIFICATION)
+  
+  // Email verification
+  emailVerified      DateTime?
+  emailVerifyToken   String?   @unique
+  emailVerifyExpires DateTime?
+  
+  // Password reset
+  resetToken         String?   @unique
+  resetTokenExpires  DateTime?
+  
+  // OAuth
+  providers    UserProvider[]
+  
+  // Activity tracking
+  lastLogin    DateTime?
+  loginCount   Int      @default(0)
+  
+  // Timestamps
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // DevLogr Features
+  projects     Project[]
+  sessions     Session[]
+  apiKeys      ApiKey[]
+  taskComments TaskComment[]
+  timeEntries  TimeEntry[]
+  issueComments IssueComment[]
+  feedbackComments FeedbackComment[]
+  
+  @@map("users")
+}
+
+model UserProvider {
+  id           String       @id @default(cuid())
+  userId       String
+  provider     AuthProvider
+  providerId   String       // OAuth provider user ID
+
+  // SECURITY: OAuth tokens are sensitive and should be encrypted at rest.
+  accessToken  String?      @db.Text
+  refreshToken String?      @db.Text
+  
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  @@unique([provider, providerId])
+  @@map("user_providers")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  // SECURITY: These tokens provide access to user accounts and should be encrypted at rest.
+  token        String   @unique
+  refreshToken String?  @unique
+  expiresAt    DateTime
+  
+  // Session info
+  ipAddress    String?
+  userAgent    String?  @db.Text
+  lastUsed     DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("sessions")
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   // User-friendly name for the API key
+  
+  // SECURITY: The key should be hashed before being stored in the database.
+  // Do not store the raw API key.
+  key         String   @unique
+  
+  permissions String   @db.Text // JSON array of permissions
+  
+  lastUsed    DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("api_keys")
+}
+
+// ===========================
+// DEVLOGR PROJECT MODELS
+// ===========================
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+  PAUSED
+}
+
+enum ProjectVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum FeedbackCategory {
+  GENERAL
+  FEATURE_REQUEST
+  IMPROVEMENT
+  PRAISE
+}
+
+model Project {
+  id          String            @id @default(cuid())
+  userId      String
+  
+  // Basic info
+  title       String
+  description String?           @db.Text
+  slug        String            @unique
+  
+  // Settings
+  status      ProjectStatus     @default(DRAFT)
+  visibility  ProjectVisibility @default(PUBLIC)
+  
+  // Progress tracking
+  progress    Int               @default(0) // 0-100
+  startDate   DateTime?
+  endDate     DateTime?
+  
+  // Community features
+  allowIssues   Boolean         @default(true)
+  allowFeedback Boolean         @default(true)
+  
+  // Customization
+  theme       String?           // Color theme
+  banner      String?           // Banner image URL
+  
+  // Relations
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones  Milestone[]
+  updates     ProjectUpdate[]
+  tags        ProjectTag[]
+  issues      Issue[]
+  feedback    Feedback[]
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  @@index([userId])
+  @@index([slug])
+  @@index([userId, updatedAt])
+  @@index([visibility, status])
+  @@map("projects")
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  projectId   String
+  
+  title       String
+  description String?  @db.Text
+  dueDate     DateTime?
+  completedAt DateTime?
+  progress    Int      @default(0) // 0-100 (auto-calculated from tasks)
+  
+  // Milestone ordering
+  order       Int      @default(0)
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([projectId])
+  @@index([projectId, order])
+  @@index([projectId, createdAt])
+  @@map("milestones")
+}
+
+model Task {
+  id           String      @id @default(cuid())
+  milestoneId  String
+  
+  title        String
+  description  String?     @db.Text
+  status       TaskStatus  @default(TODO)
+  priority     TaskPriority @default(MEDIUM)
+  
+  // Time tracking
+  estimatedHours Float?
+  actualHours    Float?     @default(0)
+  
+  // Dates
+  dueDate      DateTime?
+  startDate    DateTime?
+  completedAt  DateTime?
+  
+  // Task dependencies
+  dependsOn    TaskDependency[] @relation("TaskDependencies")
+  cancelledBy    TaskDependency[] @relation("CancelledTasks")
+  
+  // Assignment (for future team features)
+  assigneeId   String?
+  
+  // Task ordering within milestone
+  order        Int         @default(0)
+  
+  milestone    Milestone   @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  subtasks     Subtask[]
+  comments     TaskComment[]
+  timeEntries  TimeEntry[]
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  @@index([milestoneId])
+  @@index([milestoneId, order])
+  @@index([status])
+  @@index([assigneeId])
+  @@map("tasks")
+}
+
+model Subtask {
+  id          String   @id @default(cuid())
+  taskId      String
+  
+  title       String
+  completed   Boolean  @default(false)
+  order       Int      @default(0)
+  
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([taskId])
+  @@index([taskId, order])
+  @@map("subtasks")
+}
+
+model TaskDependency {
+  id           String @id @default(cuid())
+  taskId       String // The task that depends on another
+  dependsOnId  String // The task that must be completed first
+  
+  task         Task   @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn    Task   @relation("CancelledTasks", fields: [dependsOnId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  
+  @@unique([taskId, dependsOnId])
+  @@map("task_dependencies")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  
+  content   String   @db.Text
+  
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([taskId])
+  @@index([userId])
+  @@map("task_comments")
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String
+  
+  hours       Float
+  description String?  @db.Text
+  date        DateTime @default(now())
+  
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([taskId])
+  @@index([userId])
+  @@index([date])
+  @@map("time_entries")
+}
+
+enum UpdateType {
+  PROGRESS
+  MILESTONE
+  FEATURE
+  BUGFIX
+  ANNOUNCEMENT
+  RELEASE
+}
+
+model ProjectUpdate {
+  id        String     @id @default(cuid())
+  projectId String
+  
+  title     String
+  content   String     @db.Text
+  type      UpdateType @default(PROGRESS)
+  
+  // Media
+  images    String?    @db.Text // JSON array of image URLs
+  
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@index([projectId])
+  @@index([projectId, createdAt])
+  @@map("project_updates")
+}
+
+model Tag {
+  id       String       @id @default(cuid())
+  name     String       @unique
+  color    String?      // Hex color code
+  
+  projects ProjectTag[]
+  
+  createdAt DateTime    @default(now())
+  
+  @@map("tags")
+}
+
+model ProjectTag {
+  id        String  @id @default(cuid())
+  projectId String
+  tagId     String
+  
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([projectId, tagId])
+  @@index([projectId])
+  @@map("project_tags")
+}
+
+// ===========================
+// SYSTEM MODELS
+// ===========================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // null for system actions
+  action    String   // e.g., "user.login", "project.create"
+  resource  String?  // resource ID that was affected
+  details   String?  @db.Text // JSON details
+  ipAddress String?
+  userAgent String?  @db.Text
+  
+  createdAt DateTime @default(now())
+  
+  @@map("audit_logs")
+}
+
+// INSERT NEW ENUMS AND MODEL BELOW AUDITLOG
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueCategory {
+  BUG
+  FEATURE_REQUEST
+  IMPROVEMENT
+  QUESTION
+}
+
+model Issue {
+  id            String         @id @default(cuid())
+  projectId     String
+
+  // Reporter details (null if reporter is a registered user and reporterName is not provided)
+  reporterId    String?        // For authenticated users
+  reporterName  String
+  reporterEmail String?
+
+  title         String
+  description   String         @db.Text
+  status        IssueStatus    @default(OPEN)
+  priority      IssuePriority  @default(MEDIUM)
+  category      IssueCategory  @default(BUG)
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  comments      IssueComment[]
+  @@index([projectId])
+  @@map("issues")
+}
+
+model IssueComment {
+  id        String   @id @default(cuid())
+  issueId   String
+  userId    String
+  content   String   @db.Text
+
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([issueId])
+  @@map("issue_comments")
+}
+
+model Feedback {
+  id             String           @id @default(cuid())
+  projectId      String
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  message        String           @db.Text
+  rating         Int
+  category       FeedbackCategory @default(GENERAL)
+  submitterName  String
+  submitterEmail String?
+
+  comments       FeedbackComment[]
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([projectId])
+  @@map("feedback")
+}
+
+model FeedbackComment {
+  id         String   @id @default(cuid())
+  feedbackId String
+  userId     String
+  content    String   @db.Text
+
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@index([feedbackId])
+  @@map("feedback_comments")
+}
