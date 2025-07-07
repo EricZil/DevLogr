@@ -27,13 +27,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Handle API proxy to your Express backend
-  if (url.pathname.startsWith('/api/')) {
-    console.log(`🔄 Proxying API call to backend: ${BACKEND_URL}${url.pathname}`)
-    const backendUrl = new URL(url.pathname + url.search, BACKEND_URL)
-    return NextResponse.rewrite(backendUrl)
-  }
-
   // Handle custom domain or subdomain routing
   if (isCustomDomain || subdomain) {
     const domain = isCustomDomain ? hostname : subdomain
