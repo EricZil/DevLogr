@@ -77,8 +77,12 @@ export default function ProjectManagement() {
         });
 
         if (response.ok) {
-          const projectData = await response.json();
-          setProject(projectData);
+          const responseData = await response.json();
+          if (responseData.success && responseData.data) {
+            setProject(responseData.data);
+          } else {
+            setError(responseData.message || 'Failed to load project');
+          }
         } else if (response.status === 404) {
           setError('Project not found');
         } else if (response.status === 403) {
@@ -115,11 +119,17 @@ export default function ProjectManagement() {
       });
 
       if (response.ok) {
-        const updatedProject = await response.json();
-        setProject(prev => prev ? { ...prev, ...updatedProject } : null);
-        setToast({ message: 'Project information updated successfully!', type: 'success' });
-        setTimeout(() => setToast(null), 3000);
-        return true;
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setProject(prev => prev ? { ...prev, ...responseData.data } : null);
+          setToast({ message: 'Project information updated successfully!', type: 'success' });
+          setTimeout(() => setToast(null), 3000);
+          return true;
+        } else {
+          setToast({ message: responseData.message || 'Failed to update project information', type: 'error' });
+          setTimeout(() => setToast(null), 3000);
+          return false;
+        }
       }
       setToast({ message: 'Failed to update project information', type: 'error' });
       setTimeout(() => setToast(null), 3000);
@@ -150,9 +160,11 @@ export default function ProjectManagement() {
       });
 
       if (response.ok) {
-        const updatedProject = await response.json();
-        setProject(prev => prev ? { ...prev, ...updatedProject } : null);
-        return true;
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setProject(prev => prev ? { ...prev, ...responseData.data } : null);
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -179,9 +191,11 @@ export default function ProjectManagement() {
       });
 
       if (response.ok) {
-        const updatedProject = await response.json();
-        setProject(prev => prev ? { ...prev, ...updatedProject } : null);
-        return true;
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setProject(prev => prev ? { ...prev, ...responseData.data } : null);
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -204,8 +218,10 @@ export default function ProjectManagement() {
       });
 
       if (response.ok) {
-        const tags: Tag[] = await response.json();
-        setProjectTags(tags);
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setProjectTags(responseData.data);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch tags:', error);
@@ -224,8 +240,10 @@ export default function ProjectManagement() {
       });
 
       if (response.ok) {
-        const tags: Tag[] = await response.json();
-        setPopularTags(tags);
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setPopularTags(responseData.data);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch popular tags:', error);
@@ -247,10 +265,12 @@ export default function ProjectManagement() {
       });
 
       if (response.ok) {
-        const newTag: Tag = await response.json();
-        setProjectTags(prev => [...prev, newTag]);
-        setNewTagName('');
-        return true;
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setProjectTags(prev => [...prev, responseData.data]);
+          setNewTagName('');
+          return true;
+        }
       }
       return false;
     } catch (error) {

@@ -15,9 +15,7 @@ interface FeedbackManagerProps {
   projectId: string;
 }
 
-type ApiWithKey = {
-  getApiKey: () => Promise<string>;
-};
+
 
 const getCategoryColor = (category: Feedback['category']) => {
   switch (category) {
@@ -74,17 +72,17 @@ export default function FeedbackManager({ projectId }: FeedbackManagerProps) {
     try {
       setLoading(true);
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/feedback`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=feedback`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
       if (res.ok) {
-        const data = await res.json();
-        setFeedback(data);
+        const responseData = await res.json();
+        if (responseData.success && responseData.data) {
+          setFeedback(responseData.data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch feedback:', err);
@@ -97,14 +95,15 @@ export default function FeedbackManager({ projectId }: FeedbackManagerProps) {
   const fetchComments = async (id: string) => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/feedback/${id}/comments`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'X-API-Key': apiKey },
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/feedback?id=${id}&action=comments`, {
+        headers: { 'Authorization': `Bearer ${token}` },
         credentials: 'include',
       });
       if (res.ok) {
-        const data = await res.json();
-        setCommentsMap(prev => ({ ...prev, [id]: data }));
+        const responseData = await res.json();
+        if (responseData.success && responseData.data) {
+          setCommentsMap(prev => ({ ...prev, [id]: responseData.data }));
+        }
       }
     } catch (err) { console.error(err); }
   };
@@ -113,10 +112,9 @@ export default function FeedbackManager({ projectId }: FeedbackManagerProps) {
     if (!commentInput.trim()) return;
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/feedback/${id}/comments`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/feedback?id=${id}&action=comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-API-Key': apiKey },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         credentials: 'include',
         body: JSON.stringify({ content: commentInput.trim() })
       });
@@ -131,10 +129,9 @@ export default function FeedbackManager({ projectId }: FeedbackManagerProps) {
     if (!confirm('Delete this feedback?')) return;
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/feedback/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/feedback?id=${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}`, 'X-API-Key': apiKey },
+        headers: { 'Authorization': `Bearer ${token}` },
         credentials: 'include',
       });
       if (res.ok) {

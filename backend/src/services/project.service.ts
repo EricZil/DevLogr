@@ -358,8 +358,19 @@ export async function getPublicProjectBySlug(slug: string) {
     },
   });
   if (!project) {
+    console.log('No public project found:', slug);
+    
+    const anyProject = await prisma.project.findUnique({ where: { slug } });
+    if (anyProject) {
+      console.log('Project exists:', anyProject.visibility);
+    } else {
+      console.log('No project found with slug:', slug);
+    }
+    
     throw new AppError("Project not found or not public", 404, "PROJECT_NOT_FOUND");
   }
+  
+  console.log('public project:', { id: project.id, title: project.title, slug: project.slug });
 
   const processedProject = {
     ...project,

@@ -15,6 +15,14 @@ const corsMiddleware = cors({
       return callback(null, true);
     }
     
+    if (origin.endsWith('.devlogr.space')) {
+      return callback(null, true);
+    }
+    
+    if (origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
     if (origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }

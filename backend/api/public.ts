@@ -31,66 +31,66 @@ export default async function handler(
       switch (action) {
         case 'project':
           if (typeof slug !== "string") {
-            return res.status(400).json({ error: "Invalid project slug" });
+            return res.status(400).json({ success: false, error: "Invalid project slug" });
           }
           if (req.method !== "GET") {
             res.setHeader("Allow", ["GET"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
           }
           const project = await getPublicProjectBySlug(slug);
-          return res.status(200).json(project);
+          return res.status(200).json({ success: true, data: project });
 
         case 'issues':
           if (typeof slug !== "string") {
-            return res.status(400).json({ error: "Invalid project slug" });
+            return res.status(400).json({ success: false, error: "Invalid project slug" });
           }
           if (req.method !== "GET") {
             res.setHeader("Allow", ["GET"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
           }
           const issues = await getPublicIssues(slug);
-          return res.status(200).json(issues);
+          return res.status(200).json({ success: true, data: issues });
 
         case 'create-issue':
           if (typeof slug !== "string") {
-            return res.status(400).json({ error: "Invalid project slug" });
+            return res.status(400).json({ success: false, error: "Invalid project slug" });
           }
           if (req.method !== "POST") {
             res.setHeader("Allow", ["POST"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
           }
           const newIssue = await createPublicIssue(slug, req.body);
-          return res.status(201).json(newIssue);
+          return res.status(201).json({ success: true, data: newIssue });
 
         case 'create-feedback':
           if (typeof slug !== "string") {
-            return res.status(400).json({ error: "Invalid project slug" });
+            return res.status(400).json({ success: false, error: "Invalid project slug" });
           }
           if (req.method !== "POST") {
             res.setHeader("Allow", ["POST"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
           }
           const newFeedback = await createPublicFeedback(slug, req.body);
-          return res.status(201).json(newFeedback);
+          return res.status(201).json({ success: true, data: newFeedback });
 
         case 'issue-comments':
           if (typeof issueId !== "string") {
-            return res.status(400).json({ error: "Invalid issue ID" });
+            return res.status(400).json({ success: false, error: "Invalid issue ID" });
           }
           if (req.method !== "GET") {
             res.setHeader("Allow", ["GET"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
           }
           const comments = await getIssueComments(issueId);
-          return res.status(200).json(comments);
+          return res.status(200).json({ success: true, data: comments });
 
         default:
-          return res.status(404).json({ error: "Public action not found" });
+          return res.status(404).json({ success: false, error: "Public action not found" });
       }
     }
 
     if (typeof slug !== "string") {
-      return res.status(400).json({ error: "Invalid project slug" });
+      return res.status(400).json({ success: false, error: "Invalid project slug" });
     }
 
     switch (type) {
@@ -98,15 +98,15 @@ export default async function handler(
         switch (req.method) {
           case "GET":
             const feedback = await getPublicFeedback(slug);
-            return res.status(200).json(feedback);
+            return res.status(200).json({ success: true, data: feedback });
 
           case "POST":
             const newFeedback = await createPublicFeedback(slug, req.body);
-            return res.status(201).json(newFeedback);
+            return res.status(201).json({ success: true, data: newFeedback });
 
           default:
             res.setHeader("Allow", ["GET", "POST"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
         }
         break;
 
@@ -114,28 +114,28 @@ export default async function handler(
         switch (req.method) {
           case "GET":
             const issues = await getPublicIssues(slug);
-            return res.status(200).json(issues);
+            return res.status(200).json({ success: true, data: issues });
 
           case "POST":
             const newIssue = await createPublicIssue(slug, req.body);
-            return res.status(201).json(newIssue);
+            return res.status(201).json({ success: true, data: newIssue });
 
           default:
             res.setHeader("Allow", ["GET", "POST"]);
-            return res.status(405).json({ error: "Method not allowed" });
+            return res.status(405).json({ success: false, error: "Method not allowed" });
         }
         break;
 
       default:
-        return res.status(404).json({ error: "Public endpoint type not found" });
+        return res.status(404).json({ success: false, error: "Public endpoint type not found" });
     }
   } catch (error) {
     if (error instanceof AppError) {
       return res
         .status(error.statusCode)
-        .json({ error: error.message, code: error.code });
+        .json({ success: false, error: error.message, code: error.code });
     }
     console.error("Internal Server Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
 } 
