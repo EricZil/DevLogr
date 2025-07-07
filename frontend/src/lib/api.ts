@@ -96,7 +96,7 @@ class ApiService {
     skipAuth = false
   ): Promise<ApiResponse<T>> {
     // Always use the backend API URL - either from env var or default
-    const apiBase = API_BASE || 'https://api.devlogr.eryxks.cloud';
+    const apiBase = API_BASE || 'https://api.devlogr.space';
     const url = `${apiBase}/api${endpoint}`;
     
     // Use the standard Headers object for type safety and correctness.

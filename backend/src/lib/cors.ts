@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 // Define allowed origins
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://devlogr.eryxks.cloud',
+  'https://devlogr.space',
   process.env.FRONTEND_URL,
 ].filter(Boolean); // Remove any undefined values
 
