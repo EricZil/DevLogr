@@ -24,36 +24,36 @@ export default async function handler(
       case 'login':
         if (req.method !== "POST") {
           res.setHeader("Allow", ["POST"]);
-          return res.status(405).json({ error: "Method not allowed" });
+          return res.status(405).json({ success: false, error: "Method not allowed" });
         }
         const loginResult = await loginUser(req.body, ipAddress, userAgent);
-        return res.status(200).json(loginResult);
+        return res.status(200).json({ success: true, data: loginResult });
 
       case 'register':
         if (req.method !== "POST") {
           res.setHeader("Allow", ["POST"]);
-          return res.status(405).json({ error: "Method not allowed" });
+          return res.status(405).json({ success: false, error: "Method not allowed" });
         }
         const registerResult = await registerUser(req.body, ipAddress, userAgent);
-        return res.status(201).json(registerResult);
+        return res.status(201).json({ success: true, data: registerResult });
 
       case 'logout':
         if (req.method !== "POST") {
           res.setHeader("Allow", ["POST"]);
-          return res.status(405).json({ error: "Method not allowed" });
+          return res.status(405).json({ success: false, error: "Method not allowed" });
         }
         const token = req.headers.authorization?.replace('Bearer ', '');
         const logoutResult = await logoutUser(token || '');
-        return res.status(200).json(logoutResult);
+        return res.status(200).json({ success: true, data: logoutResult });
 
       case 'refresh-token':
         if (req.method !== "POST") {
           res.setHeader("Allow", ["POST"]);
-          return res.status(405).json({ error: "Method not allowed" });
+          return res.status(405).json({ success: false, error: "Method not allowed" });
         }
         const { token: refreshToken } = req.body;
         const refreshResult = await refreshUserToken(refreshToken);
-        return res.status(200).json(refreshResult);
+        return res.status(200).json({ success: true, data: refreshResult });
 
       case 'me':
         if (req.method !== "GET") {
@@ -65,19 +65,19 @@ export default async function handler(
         return res.status(200).json({ success: true, data: user });
 
       default:
-        return res.status(404).json({ error: "Auth action not found" });
+        return res.status(404).json({ success: false, error: "Auth action not found" });
     }
 
   } catch (error: any) {
     if (error instanceof AppError) {
       return res
         .status(error.statusCode)
-        .json({ error: error.message, code: error.code });
+        .json({ success: false, message: error.message, error: error.message, code: error.code });
     }
     if (error.name === 'ZodError') {
-      return res.status(400).json({ error: 'Validation failed', details: error.errors });
+      return res.status(400).json({ success: false, message: 'Validation failed', error: 'Validation failed', details: error.errors });
     }
     console.error("Internal Server Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ success: false, message: "Internal server error", error: "Internal server error" });
   }
 } 

@@ -20,7 +20,7 @@ async function verifyMilestoneOwnership(milestoneId: string, userId: string) {
 // Validation schema for creating a milestone
 const createMilestoneSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
 });
 

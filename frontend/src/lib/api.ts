@@ -398,10 +398,15 @@ export const domainUtils = {
     }
 
     const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
+    const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1') || hostname.endsWith('.localhost');
     
-    // For local development
+    // For local development - check for subdomain testing in localhost
     if (isLocalhost) {
+      // Check if it's a subdomain on localhost (e.g., test.localhost:3000)
+      if (hostname.includes('.localhost')) {
+        const slug = hostname.split('.localhost')[0];
+        return { type: 'subdomain', slug };
+      }
       return { type: 'main' };
     }
 

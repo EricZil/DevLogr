@@ -227,18 +227,21 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         })
       });
 
-      if (response.ok) {
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
         setNewMilestone({ title: '', description: '', dueDate: '' });
         setIsCreating(false);
         success('Milestone created successfully!');
         fetchMilestones();
         fetchStats();
       } else {
-        error('Failed to create milestone');
+        console.error('API Error:', data);
+        error(data.message || data.error || 'Failed to create milestone');
       }
     } catch (err) {
       console.error('Failed to create milestone:', err);
-      error('An error occurred');
+      error('Network error occurred');
     }
   };
 
