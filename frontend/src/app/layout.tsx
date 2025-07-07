@@ -1,33 +1,39 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { domainUtils } from '@/lib/api';
+import PublicProjectPage from '@/components/public/PublicProjectPage';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Devlogr - Share Your Development Journey",
-  description: "An open-source platform for developers to create and share their project development logs, track progress, and engage with a community of builders.",
+  title: "DevLogr - Track Your Development Journey",
+  description: "Share your development progress with beautiful project pages",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  const shouldShowPublic = domainUtils.shouldShowPublicProject();
+
+  if (shouldShowPublic) {
+    return (
+      <html lang="en">
+        <body className={inter.className}>
+          <NotificationProvider>
+            <PublicProjectPage />
+          </NotificationProvider>
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={inter.className}>
         <NotificationProvider>
           {children}
         </NotificationProvider>

@@ -12,8 +12,8 @@ interface ProjectSetupProps {
 interface ProjectData {
   name: string;
   description: string;
-  subdomain: string;
-  hostingType: 'subdomain' | 'custom';
+  slug: string;
+  domainType: 'subdomain' | 'custom';
   customDomain?: string;
   visibility: 'PUBLIC' | 'PRIVATE';
   tags: string[];
@@ -28,42 +28,10 @@ interface ProjectData {
 
 interface Project {
   id: string;
-  name: string;
   title: string;
-  description: string | null;
   slug: string;
-  visibility: string;
   status: string;
-  progress: number;
-  icon: string | null;
-  color: string | null;
-  githubUrl: string | null;
-  twitterUrl: string | null;
-  websiteUrl: string | null;
-  allowIssues: boolean;
-  allowFeedback: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastUpdate: string;
-  user: {
-    id: string;
-    name: string;
-    username: string;
-    avatar: string;
-  };
-  tags: Array<{
-    tag: {
-      id: string;
-      name: string;
-      color: string | null;
-    };
-  }>;
-  _count: {
-    updates: number;
-    milestones: number;
-    issues: number;
-    feedback: number;
-  };
+  visibility: string;
 }
 
 export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSetupProps) {
@@ -71,40 +39,62 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
   const [projectData, setProjectData] = useState<ProjectData>({
     name: '',
     description: '',
-    subdomain: '',
-    hostingType: 'subdomain',
+    slug: '',
+    domainType: 'subdomain',
     visibility: 'PUBLIC',
     tags: [],
     allowIssues: true,
     allowFeedback: true
   });
-  const [isSubdomainChecking, setIsSubdomainChecking] = useState(false);
-  const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null);
+  const [isSlugChecking, setIsSlugChecking] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [isDomainChecking, setIsDomainChecking] = useState(false);
+  const [domainAvailable, setDomainAvailable] = useState<boolean | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
   const totalSteps = 5;
 
-  const checkSubdomainAvailability = async (subdomain: string) => {
-    if (!subdomain || subdomain.length < 3) return;
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 3) return;
     
-    setIsSubdomainChecking(true);
+    setIsSlugChecking(true);
     try {
-      const response = await api.checkSlugAvailability(subdomain);
+      const response = await api.checkSlugAvailability(slug);
       
       if (response.success && response.data) {
-        setSubdomainAvailable(response.data.available);
+        setSlugAvailable(response.data.available);
       } else {
         console.error('Error checking slug availability:', response.message);
-        setSubdomainAvailable(false);
+        setSlugAvailable(false);
       }
     } catch (error) {
       console.error('Error checking slug availability:', error);
-      setSubdomainAvailable(false);
+      setSlugAvailable(false);
     } finally {
-      setIsSubdomainChecking(false);
+      setIsSlugChecking(false);
     }
+  };
+
+  const checkCustomDomain = async (domain: string) => {
+    if (!domain || !isValidDomain(domain)) return;
+    
+    setIsDomainChecking(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setDomainAvailable(true);
+    } catch (error) {
+      console.error('Error checking domain availability:', error);
+      setDomainAvailable(false);
+    } finally {
+      setIsDomainChecking(false);
+    }
+  };
+
+  const isValidDomain = (domain: string) => {
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.([a-zA-Z]{2,}\.?)+$/;
+    return domainRegex.test(domain);
   };
 
   useEffect(() => {
@@ -115,18 +105,35 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
     };
   }, [debounceTimer]);
 
-  const debouncedCheckSubdomain = useCallback((subdomain: string) => {
+  const debouncedCheckSlug = useCallback((slug: string) => {
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
 
-    setSubdomainAvailable(null);
-    setIsSubdomainChecking(false);
+    setSlugAvailable(null);
+    setIsSlugChecking(false);
 
-    if (!subdomain || subdomain.length < 3) return;
+    if (!slug || slug.length < 3) return;
 
     const timer = setTimeout(() => {
-      checkSubdomainAvailability(subdomain);
+      checkSlugAvailability(slug);
+    }, 500);
+
+    setDebounceTimer(timer);
+  }, [debounceTimer]);
+
+  const debouncedCheckDomain = useCallback((domain: string) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    setDomainAvailable(null);
+    setIsDomainChecking(false);
+
+    if (!domain || !isValidDomain(domain)) return;
+
+    const timer = setTimeout(() => {
+      checkCustomDomain(domain);
     }, 500);
 
     setDebounceTimer(timer);
@@ -154,13 +161,14 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
         tags: projectData.tags,
         allowIssues: projectData.allowIssues,
         allowFeedback: projectData.allowFeedback,
+        customDomain: projectData.domainType === 'custom' ? projectData.customDomain : undefined,
       });
 
       if (!response.success || !response.data) {
         throw new Error(response.message || `Failed to create project`);
       }
 
-      onComplete(response.data as Project);
+      onComplete(response.data as unknown as Project);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project');
@@ -175,7 +183,7 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
     }
   };
 
-  const generateSubdomain = (name: string) => {
+  const generateSlug = (name: string) => {
     return name
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
@@ -185,14 +193,32 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
   };
 
   const updateProjectName = (name: string) => {
+    const newSlug = generateSlug(name);
     setProjectData(prev => ({
       ...prev,
       name,
-      subdomain: generateSubdomain(name)
+      slug: newSlug
     }));
     
-    if (name) {
-      debouncedCheckSubdomain(generateSubdomain(name));
+    if (name && projectData.domainType === 'subdomain') {
+      debouncedCheckSlug(newSlug);
+    }
+  };
+
+  const updateSlug = (slug: string) => {
+    const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setProjectData(prev => ({ ...prev, slug: cleanSlug }));
+    
+    if (cleanSlug && projectData.domainType === 'subdomain') {
+      debouncedCheckSlug(cleanSlug);
+    }
+  };
+
+  const updateCustomDomain = (domain: string) => {
+    setProjectData(prev => ({ ...prev, customDomain: domain }));
+    
+    if (domain) {
+      debouncedCheckDomain(domain);
     }
   };
 
@@ -285,56 +311,120 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-white mb-2">Development Environment</h3>
-              <p className="text-zinc-400">Your project will be accessible locally during development</p>
+              <h3 className="text-2xl font-bold text-white mb-2">Choose your domain</h3>
+              <p className="text-zinc-400">How do you want visitors to access your project?</p>
             </div>
 
             <div className="space-y-4">
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
+              <button
+                onClick={() => {
+                  setProjectData(prev => ({ ...prev, domainType: 'subdomain' }));
+                  if (projectData.slug) {
+                    debouncedCheckSlug(projectData.slug);
+                  }
+                }}
+                className={`w-full p-6 rounded-xl border transition-all duration-300 text-left ${
+                  projectData.domainType === 'subdomain'
+                    ? 'bg-blue-500/20 border-blue-500/50'
+                    : 'bg-white/5 border-white/10 hover:border-white/20'
+                }`}
+              >
                 <div className="flex items-start space-x-4">
-                  <div className="bg-blue-500/20 p-3 rounded-xl">
+                  <div className={`p-3 rounded-xl ${
+                    projectData.domainType === 'subdomain' ? 'bg-blue-500/20' : 'bg-white/10'
+                  }`}>
                     <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9m0 9c-5 0-9-4-9-9s4-9 9-9" />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-blue-100 mb-3">Local Development Setup</h4>
-                    <p className="text-blue-200/70 mb-4">
-                      During development, your project will be accessible at a local URL. In production, this will become a subdomain or custom domain.
+                    <h4 className="text-lg font-semibold text-white mb-2">DevLogr Subdomain</h4>
+                    <p className="text-zinc-300 mb-3">
+                      Get a free subdomain on our network with instant setup and SSL
                     </p>
                     
-                    {projectData.name && (
-                      <div className="bg-black/30 rounded-lg p-4 border border-blue-500/30">
-                        <div className="mb-2">
-                          <span className="text-sm text-blue-200/70">Your project will be available at:</span>
-                        </div>
-                        <code className="text-blue-300 font-mono text-sm bg-blue-500/20 px-3 py-2 rounded border border-blue-500/30 inline-block">
-                          /projects/{projectData.subdomain || 'your-project'}
-                          </code>
-                        <div className="mt-3 text-xs text-blue-200/60">
-                          • Clean, SEO-friendly URLs<br/>
-                          • Fast local development<br/>
-                          • Easy to test and iterate
-                        </div>
+                    {projectData.slug && (
+                      <div className="bg-black/30 rounded-lg p-3 border border-blue-500/30">
+                        <code className="text-blue-300 font-mono text-sm">
+                          {projectData.slug}.devlogr.space
+                        </code>
                       </div>
                     )}
+                    
+                    <div className="flex items-center space-x-4 mt-3 text-sm">
+                      <div className="flex items-center space-x-1 text-emerald-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Free SSL</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-emerald-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Instant Setup</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-emerald-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                        <span>Global CDN</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                  </div>
+              </button>
 
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-                <div className="flex items-start space-x-3">
-                  <svg className="w-5 h-5 text-amber-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                  <div>
-                    <h5 className="text-amber-100 font-semibold text-sm mb-1">Production Ready</h5>
-                    <p className="text-amber-200/70 text-sm">
-                      When you&apos;re ready to go live, we&apos;ll automatically set up subdomains and custom domain support.
+              <button
+                onClick={() => {
+                  setProjectData(prev => ({ ...prev, domainType: 'custom' }));
+                  if (projectData.customDomain) {
+                    debouncedCheckDomain(projectData.customDomain);
+                  }
+                }}
+                className={`w-full p-6 rounded-xl border transition-all duration-300 text-left ${
+                  projectData.domainType === 'custom'
+                    ? 'bg-purple-500/20 border-purple-500/50'
+                    : 'bg-white/5 border-white/10 hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className={`p-3 rounded-xl ${
+                    projectData.domainType === 'custom' ? 'bg-purple-500/20' : 'bg-white/10'
+                  }`}>
+                    <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-white mb-2">Custom Domain</h4>
+                    <p className="text-zinc-300 mb-3">
+                      Use your own domain for professional branding
                     </p>
+                    
+                    <div className="flex items-center space-x-4 text-sm">
+                      <div className="flex items-center space-x-1 text-amber-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Requires DNS setup</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-emerald-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Auto SSL</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-emerald-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                        <span>Professional</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         );
@@ -343,83 +433,174 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-white mb-2">Customize your subdomain</h3>
-              <p className="text-zinc-400">Fine-tune your project&apos;s web address</p>
+              <h3 className="text-2xl font-bold text-white mb-2">
+                {projectData.domainType === 'subdomain' ? 'Configure your subdomain' : 'Configure your custom domain'}
+              </h3>
+              <p className="text-zinc-400">
+                {projectData.domainType === 'subdomain' 
+                  ? 'Choose your project\'s web address' 
+                  : 'Set up your custom domain'}
+              </p>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-white mb-3">
-                  Subdomain *
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={projectData.subdomain}
-                    onChange={(e) => {
-                      const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                      setProjectData(prev => ({ ...prev, subdomain }));
-                      if (subdomain) {
-                        debouncedCheckSubdomain(subdomain);
-                      }
-                    }}
-                    placeholder="my-project"
-                    className="w-full pl-4 pr-32 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-300"
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                    <span className="text-zinc-400 text-sm">.devlogr.com</span>
-                  </div>
-                </div>
-                
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    {isSubdomainChecking ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
-                        <span className="text-zinc-400">Checking availability...</span>
-                      </>
-                    ) : subdomainAvailable === true ? (
-                      <>
-                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="text-emerald-400">Available!</span>
-                      </>
-                    ) : subdomainAvailable === false ? (
-                      <>
-                        <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <span className="text-red-400">Not available</span>
-                      </>
-                    ) : null}
+            {projectData.domainType === 'subdomain' ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-3">
+                    Subdomain *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={projectData.slug}
+                      onChange={(e) => updateSlug(e.target.value)}
+                      placeholder="my-project"
+                      className="w-full pl-4 pr-40 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all duration-300"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                      <span className="text-zinc-400 text-sm">.devlogr.space</span>
+                    </div>
                   </div>
                   
-                  <div className="text-xs text-zinc-500">
-                    • Only lowercase letters, numbers, and hyphens allowed<br/>
-                    • Must be 3-30 characters long<br/>
-                    • Cannot start or end with a hyphen
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center space-x-2 text-sm">
+                      {isSlugChecking ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                          <span className="text-zinc-400">Checking availability...</span>
+                        </>
+                      ) : slugAvailable === true ? (
+                        <>
+                          <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-emerald-400">Available!</span>
+                        </>
+                      ) : slugAvailable === false ? (
+                        <>
+                          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          <span className="text-red-400">Not available</span>
+                        </>
+                      ) : null}
+                    </div>
+                    
+                    <div className="text-xs text-zinc-500">
+                      • Only lowercase letters, numbers, and hyphens allowed<br/>
+                      • Must be 3-30 characters long<br/>
+                      • Cannot start or end with a hyphen
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
-                <div className="flex items-start space-x-3">
-                  <svg className="w-6 h-6 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <h4 className="text-blue-100 font-semibold mb-2">Your project will be live at:</h4>
-                    <code className="text-blue-300 font-mono text-lg bg-blue-500/20 px-4 py-2 rounded-lg border border-blue-500/30 inline-block">
-                      {projectData.subdomain || 'your-project'}.devlogr.com
-                    </code>
-                    <p className="text-blue-200/70 text-sm mt-3">
-                      Anyone can visit this URL to see your project updates and progress. You can change this later in your project settings.
-                    </p>
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-6 h-6 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-blue-100 font-semibold mb-2">Your project will be live at:</h4>
+                      <code className="text-blue-300 font-mono text-lg bg-blue-500/20 px-4 py-2 rounded-lg border border-blue-500/30 inline-block">
+                        {projectData.slug || 'your-project'}.devlogr.space
+                      </code>
+                      <p className="text-blue-200/70 text-sm mt-3">
+                        Anyone can visit this URL to see your project updates and progress. You can change this later in your project settings.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-3">
+                    Your Domain *
+                  </label>
+                  <input
+                    type="text"
+                    value={projectData.customDomain || ''}
+                    onChange={(e) => updateCustomDomain(e.target.value)}
+                    placeholder="myproject.com"
+                    className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all duration-300"
+                  />
+                  
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center space-x-2 text-sm">
+                      {isDomainChecking ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                          <span className="text-zinc-400">Validating domain...</span>
+                        </>
+                      ) : domainAvailable === true ? (
+                        <>
+                          <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-emerald-400">Valid domain format</span>
+                        </>
+                      ) : domainAvailable === false ? (
+                        <>
+                          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          <span className="text-red-400">Invalid domain format</span>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6">
+                   <div className="flex items-start space-x-3">
+                     <svg className="w-6 h-6 text-amber-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                     </svg>
+                     <div>
+                       <h4 className="text-amber-100 font-semibold mb-3">Simple DNS Setup</h4>
+                       <p className="text-amber-200/70 text-sm mb-4">
+                         Just point your domain to our infrastructure and we&apos;ll handle the rest:
+                       </p>
+                       
+                       <div className="bg-black/30 rounded-lg p-4 border border-amber-500/30">
+                         <div className="space-y-2 text-sm font-mono">
+                           <div className="text-amber-200">
+                             <span className="text-amber-400">Type:</span> CNAME
+                           </div>
+                           <div className="text-amber-200">
+                             <span className="text-amber-400">Name:</span> @ (or www)
+                           </div>
+                           <div className="text-amber-200">
+                             <span className="text-amber-400">Value:</span> proxy.devlogr.space
+                           </div>
+                         </div>
+                       </div>
+                       
+                       <div className="mt-4 space-y-2 text-xs">
+                         <div className="flex items-center space-x-2 text-emerald-200">
+                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                           </svg>
+                           <span>Automatic verification when DNS propagates</span>
+                         </div>
+                         <div className="flex items-center space-x-2 text-emerald-200">
+                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                           </svg>
+                           <span>SSL certificate auto-generated</span>
+                         </div>
+                         <div className="flex items-center space-x-2 text-emerald-200">
+                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                           </svg>
+                           <span>No additional configuration needed</span>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+              </div>
+            )}
           </div>
         );
 
@@ -606,44 +787,86 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
                 </div>
               </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
-                <h4 className="text-lg font-semibold text-blue-100 mb-4 flex items-center space-x-2">
-                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`rounded-xl p-6 ${
+                projectData.domainType === 'subdomain' 
+                  ? 'bg-blue-500/10 border border-blue-500/20' 
+                  : 'bg-purple-500/10 border border-purple-500/20'
+              }`}>
+                <h4 className={`text-lg font-semibold mb-4 flex items-center space-x-2 ${
+                  projectData.domainType === 'subdomain' ? 'text-blue-100' : 'text-purple-100'
+                }`}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  <span>Development Access</span>
+                  <span>
+                    {projectData.domainType === 'subdomain' ? 'DevLogr Subdomain' : 'Custom Domain'}
+                  </span>
                 </h4>
                 
                 <div className="space-y-3">
                   <div>
-                    <span className="text-sm text-blue-200/70">Your project will be accessible at:</span>
+                    <span className={`text-sm ${
+                      projectData.domainType === 'subdomain' ? 'text-blue-200/70' : 'text-purple-200/70'
+                    }`}>
+                      Your project will be accessible at:
+                    </span>
                     <div className="mt-2">
-                      <code className="text-blue-300 font-mono text-lg bg-blue-500/20 px-4 py-2 rounded-lg border border-blue-500/30 inline-block">
-                        /projects/{projectData.subdomain}
+                      <code className={`font-mono text-lg px-4 py-2 rounded-lg inline-block ${
+                        projectData.domainType === 'subdomain'
+                          ? 'text-blue-300 bg-blue-500/20 border border-blue-500/30'
+                          : 'text-purple-300 bg-purple-500/20 border border-purple-500/30'
+                      }`}>
+                        {projectData.domainType === 'subdomain' 
+                          ? `${projectData.slug}.devlogr.space`
+                          : projectData.customDomain || 'your-domain.com'
+                        }
                       </code>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm">
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-blue-200">Fast local development</span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 text-sm">
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-blue-200">SEO-friendly URLs</span>
-                  </div>
-
-                  <div className="flex items-center space-x-2 text-sm">
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-blue-200">Production deployment ready</span>
-                  </div>
+                  {projectData.domainType === 'subdomain' ? (
+                    <>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-blue-200">Free SSL certificate</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-blue-200">Instant activation</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-blue-200">Global CDN</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span className="text-purple-200">DNS setup required</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-purple-200">Auto SSL certificate</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-purple-200">Professional branding</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -710,12 +933,23 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
                   </li>
                   <li className="flex items-center space-x-2">
                     <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
-                    <span>Your subdomain will be activated immediately</span>
+                    <span>
+                      {projectData.domainType === 'subdomain' 
+                        ? 'Your subdomain will be activated immediately'
+                        : 'You\'ll receive DNS setup instructions'
+                      }
+                    </span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
                     <span>You can start logging your first update right away</span>
                   </li>
+                  {projectData.domainType === 'custom' && (
+                    <li className="flex items-center space-x-2">
+                      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+                      <span>SSL certificate will be auto-generated after DNS verification</span>
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -734,7 +968,11 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
       case 2:
         return true;
       case 3:
-        return projectData.subdomain.length >= 3 && subdomainAvailable === true;
+        if (projectData.domainType === 'subdomain') {
+          return projectData.slug.length >= 3 && slugAvailable === true;
+        } else {
+          return projectData.customDomain && isValidDomain(projectData.customDomain) && domainAvailable === true;
+        }
       case 4:
         return true;
       case 5:

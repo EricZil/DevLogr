@@ -48,6 +48,7 @@ interface CreateProjectData {
   tags?: string[];
   allowIssues: boolean;
   allowFeedback: boolean;
+  customDomain?: string;
 }
 
 class ApiService {
@@ -224,6 +225,28 @@ class ApiService {
     }, true);
   }
 
+  async verifyProjectDomain(projectId: string): Promise<ApiResponse<{ verified: boolean; message: string }>> {
+    return this.makeRequest<{ verified: boolean; message: string }>(`/projects/${projectId}?action=verify-domain`, {
+      method: 'POST',
+    });
+  }
+
+  async getDomainVerificationStatus(projectId: string): Promise<ApiResponse<{ 
+    customDomain: string | null; 
+    domainVerified: boolean; 
+    sslEnabled: boolean; 
+    hasCustomDomain: boolean 
+  }>> {
+    return this.makeRequest(`/projects/${projectId}?action=domain-status`);
+  }
+
+  async getPublicProject(identifier: string, type: 'slug' | 'domain'): Promise<ApiResponse<any>> {
+    const param = type === 'slug' ? `slug=${encodeURIComponent(identifier)}` : `domain=${encodeURIComponent(identifier)}`;
+    return this.makeRequest(`/projects?action=public&${param}`, {
+      method: 'GET',
+    }, true);
+  }
+
   async getRecentUpdates(limit: number): Promise<ApiResponse<ProjectUpdate[]>> {
     return this.makeRequest(`/updates?action=recent&limit=${limit}`);
   }
@@ -286,4 +309,49 @@ class ApiService {
 }
 
 export const api = new ApiService();
-export type { User, AuthTokens, RegisterData, LoginData, ApiResponse, CreateProjectData }; 
+export type { User, AuthTokens, RegisterData, LoginData, ApiResponse, CreateProjectData };
+
+export const domainUtils = {
+  getDomainInfo(): { 
+    type: 'main' | 'subdomain' | 'custom';
+    slug?: string;
+    customDomain?: string;
+  } {
+    if (typeof window === 'undefined') {
+      return { type: 'main' };
+    }
+
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
+    
+    if (isLocalhost) {
+      return { type: 'main' };
+    }
+
+    if (hostname === 'devlogr.space' || hostname === 'www.devlogr.space') {
+      return { type: 'main' };
+    }
+
+    if (hostname.endsWith('.devlogr.space')) {
+      const slug = hostname.replace('.devlogr.space', '');
+      if (slug === 'api' || slug === 'proxy' || slug === 'www') {
+        return { type: 'main' };
+      }
+      return { type: 'subdomain', slug };
+    }
+
+    return { type: 'custom', customDomain: hostname };
+  },
+
+  shouldShowPublicProject(): boolean {
+    const { type } = this.getDomainInfo();
+    return type === 'subdomain' || type === 'custom';
+  },
+
+  getProjectIdentifier(): string | null {
+    const { type, slug, customDomain } = this.getDomainInfo();
+    if (type === 'subdomain') return slug || null;
+    if (type === 'custom') return customDomain || null;
+    return null;
+  }
+}; 

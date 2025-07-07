@@ -164,6 +164,10 @@ model Project {
   allowIssues   Boolean         @default(true)
   allowFeedback Boolean         @default(true)
   
+  customDomain    String?
+  domainVerified  Boolean         @default(false)
+  sslEnabled      Boolean         @default(false)
+
   theme       String?
   banner      String?
   
