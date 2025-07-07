@@ -27,9 +27,10 @@ export function middleware(request: NextRequest) {
     const domain = isCustomDomain ? hostname : subdomain
     console.log(`domain detected: ${domain}`)
     
-    url.pathname = `/profile/${domain}`
-    console.log(`Rewriting to: ${url.pathname}`)
-    return NextResponse.rewrite(url)
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.redirect(new URL('/', `https://${MAIN_DOMAIN}`))
+    }
+    return NextResponse.next()
   }
   return NextResponse.next()
 }

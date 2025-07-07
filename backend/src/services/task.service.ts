@@ -294,7 +294,7 @@ export async function getTaskStats(taskId: string, userId: string) {
     return {
         subtasks: {
             total: fullTask.subtasks.length,
-            completed: fullTask.subtasks.filter(st => st.completed).length,
+             completed: fullTask.subtasks.filter((st: any) => st.completed).length,
         },
         timeTracking: {
             estimatedHours: fullTask.estimatedHours || 0,
