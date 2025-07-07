@@ -1,0 +1,36 @@
+{
+  "name": "devlogr-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@prisma/client": "^6.11.1",
+    "@types/cors": "^2.8.19",
+    "@vercel/node": "^5.3.3",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "express-rate-limit": "^7.5.1",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.1",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^7.0.4",
+    "zod": "^3.25.74"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/crypto-js": "^4.2.2",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.11.17",
+    "@types/nodemailer": "^6.4.17",
+    "prisma": "^6.11.1",
+    "typescript": "^5.3.3"
+  },
+  "prisma": {
+    "schema": "./prisma/schema.prisma"
+  }
+}
