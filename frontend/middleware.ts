@@ -32,10 +32,13 @@ export function middleware(request: NextRequest) {
     const domain = isCustomDomain ? hostname : subdomain
     console.log(`👤 User domain detected: ${domain}`)
     
-    // Rewrite to user profile page
-    url.pathname = `/profile/${domain}`
-    console.log(`🔄 Rewriting to: ${url.pathname}`)
-    return NextResponse.rewrite(url)
+    // For now, redirect to main domain until profile pages are implemented
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.redirect(new URL('/', `https://${MAIN_DOMAIN}`))
+    }
+    // In development, continue to main app
+    console.log(`🔄 Development: continuing to main app`)
+    return NextResponse.next()
   }
 
   // Default: continue to main app
