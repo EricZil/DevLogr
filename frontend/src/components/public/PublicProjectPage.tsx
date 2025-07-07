@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { api, domainUtils } from '@/lib/api';
 import LoadingScreen from '@/components/shared/ui/LoadingScreen';
 import OverviewTab from '@/components/public/tabs/OverviewTab';
