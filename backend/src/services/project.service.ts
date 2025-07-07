@@ -349,7 +349,24 @@ export async function getPublicProjectBySlug(slug: string) {
   if (!project) {
     throw new AppError("Project not found or not public", 404, "PROJECT_NOT_FOUND");
   }
-  return project;
+
+  // Parse images JSON for updates
+  const processedProject = {
+    ...project,
+    updates: project.updates.map(update => ({
+      ...update,
+      images: update.images ? 
+        (() => {
+          try {
+            return JSON.parse(update.images);
+          } catch {
+            return [];
+          }
+        })() : []
+    }))
+  };
+
+  return processedProject;
 }
 
 export async function checkSlugAvailability(slug: string) {
