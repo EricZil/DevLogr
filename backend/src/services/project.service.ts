@@ -269,8 +269,68 @@ export async function getPublicProjectBySlug(slug: string) {
       progress: true,
       banner: true,
       theme: true,
+      allowIssues: true,
+      allowFeedback: true,
+      startDate: true,
+      endDate: true,
       user: { select: { name: true, username: true, avatar: true } },
       tags: { select: { tag: { select: { name: true } } } },
+      milestones: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          dueDate: true,
+          completedAt: true,
+          progress: true,
+          tasks: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              status: true,
+              priority: true,
+              dueDate: true,
+              completedAt: true,
+              estimatedHours: true,
+              subtasks: {
+                select: {
+                  id: true,
+                  title: true,
+                  completed: true,
+                }
+              },
+              _count: { select: { comments: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { dueDate: 'asc' },
+      },
+      updates: {
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          type: true,
+          images: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      feedback: {
+        select: {
+          id: true,
+          message: true,
+          rating: true,
+          category: true,
+          submitterName: true,
+          submitterEmail: true,
+          createdAt: true,
+          _count: { select: { comments: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
   if (!project) {
