@@ -17,7 +17,7 @@ export async function handleGoogleCallback(code: string, ipAddress?: string, use
             client_secret: process.env.GOOGLE_CLIENT_SECRET!,
             code,
             grant_type: 'authorization_code',
-            redirect_uri: `${process.env.API_URL}/api/oauth/google/callback`,
+            redirect_uri: `${process.env.API_URL}/api/oauth?provider=google&action=callback`,
         }),
     });
     const tokens = await tokenResponse.json() as GoogleTokenResponse;
@@ -71,7 +71,7 @@ export async function handleGitHubCallback(code: string, ipAddress?: string, use
             client_id: process.env.GITHUB_CLIENT_ID!,
             client_secret: process.env.GITHUB_CLIENT_SECRET!,
             code,
-            redirect_uri: `${process.env.API_URL}/api/oauth/github/callback`,
+            redirect_uri: `${process.env.API_URL}/api/oauth?provider=github&action=callback`,
         }),
     });
     const tokens = await tokenResponse.json() as GitHubTokenResponse;

@@ -263,7 +263,7 @@ export default function AuthPage() {
 
           <div className="space-y-3">
             <button 
-              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/oauth/google`}
+              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/oauth?provider=google&action=auth`}
               className="w-full flex items-center justify-center space-x-3 bg-zinc-800/50 border border-zinc-700 rounded-xl py-3 px-4 text-white hover:bg-zinc-700/50 transition-all duration-200"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -276,7 +276,7 @@ export default function AuthPage() {
             </button>
 
             <button 
-              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/oauth/github`}
+              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/oauth?provider=github&action=auth`}
               className="w-full flex items-center justify-center space-x-3 bg-zinc-800/50 border border-zinc-700 rounded-xl py-3 px-4 text-white hover:bg-zinc-700/50 transition-all duration-200"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

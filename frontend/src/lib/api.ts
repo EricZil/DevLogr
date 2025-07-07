@@ -158,21 +158,21 @@ class ApiService {
   }
 
   async register(userData: RegisterData): Promise<ApiResponse<{ user: User; tokens: AuthTokens }>> {
-    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth/register', {
+    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth?action=register', {
       method: 'POST',
       body: JSON.stringify(userData),
     }, true);
   }
 
   async login(credentials: LoginData): Promise<ApiResponse<{ user: User; tokens: AuthTokens }>> {
-    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth/login', {
+    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth?action=login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     }, true);
   }
 
   async logout(): Promise<ApiResponse> {
-    return this.makeRequest('/auth/logout', {
+    return this.makeRequest('/auth?action=logout', {
       method: 'POST',
     });
   }
@@ -187,7 +187,7 @@ class ApiService {
       };
     }
 
-    return this.makeRequest<User>('/auth/me');
+    return this.makeRequest<User>('/auth?action=me');
   }
 
   async refreshToken(): Promise<ApiResponse<{ tokens: AuthTokens }>> {
@@ -200,7 +200,7 @@ class ApiService {
       };
     }
 
-    const response = await this.makeRequest<{ tokens: AuthTokens }>('/auth/refresh-token', {
+    const response = await this.makeRequest<{ tokens: AuthTokens }>('/auth?action=refresh-token', {
       method: 'POST',
       body: JSON.stringify({ token: refreshToken }),
     }, true);
@@ -224,13 +224,13 @@ class ApiService {
   }
 
   async checkSlugAvailability(slug: string): Promise<ApiResponse<{ available: boolean }>> {
-    return this.makeRequest(`/projects/check-slug/${slug}`, {
+    return this.makeRequest(`/projects?action=check-slug&slug=${encodeURIComponent(slug)}`, {
         method: 'GET',
     }, true);
   }
 
   async getRecentUpdates(limit: number): Promise<ApiResponse<ProjectUpdate[]>> {
-    return this.makeRequest(`/updates/recent?limit=${limit}`);
+    return this.makeRequest(`/updates?action=recent&limit=${limit}`);
   }
 
   saveTokens(tokens: AuthTokens): void {
