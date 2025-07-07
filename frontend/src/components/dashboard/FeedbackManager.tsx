@@ -79,8 +79,10 @@ export default function FeedbackManager({ projectId }: FeedbackManagerProps) {
         credentials: 'include',
       });
       if (res.ok) {
-        const data = await res.json();
-        setFeedback(data);
+        const responseData = await res.json();
+        if (responseData.success && responseData.data) {
+          setFeedback(responseData.data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch feedback:', err);
@@ -98,8 +100,10 @@ export default function FeedbackManager({ projectId }: FeedbackManagerProps) {
         credentials: 'include',
       });
       if (res.ok) {
-        const data = await res.json();
-        setCommentsMap(prev => ({ ...prev, [id]: data }));
+        const responseData = await res.json();
+        if (responseData.success && responseData.data) {
+          setCommentsMap(prev => ({ ...prev, [id]: responseData.data }));
+        }
       }
     } catch (err) { console.error(err); }
   };

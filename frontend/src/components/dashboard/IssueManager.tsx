@@ -152,8 +152,10 @@ export default function IssueManager({ projectId }: IssueManagerProps) {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setIssues(data);
+        const responseData = await res.json();
+        if (responseData.success && responseData.data) {
+          setIssues(responseData.data);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch issues:', err);
@@ -179,8 +181,10 @@ export default function IssueManager({ projectId }: IssueManagerProps) {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setCommentsMap(prev => ({ ...prev, [issueId]: data }));
+        const responseData = await res.json();
+        if (responseData.success && responseData.data) {
+          setCommentsMap(prev => ({ ...prev, [issueId]: responseData.data }));
+        }
       }
     } catch (err) {
       console.error('Failed to fetch comments:', err);

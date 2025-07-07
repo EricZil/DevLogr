@@ -19,11 +19,22 @@ const corsMiddleware = cors({
       return callback(null, true);
     }
     
+    // Allow all subdomains of devlogr.space
+    if (origin.endsWith('.devlogr.space')) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost and its subdomains
+    if (origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
     // Also allow any *.vercel.app domain for deployment previews
     if (origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
     
+    console.log('CORS: Blocked origin:', origin);
     // Block the request
     callback(new Error('Not allowed by CORS'));
   },

@@ -100,6 +100,8 @@ class ApiService {
     const apiBase = API_BASE || 'https://api.devlogr.space';
     const url = `${apiBase}/api${endpoint}`;
     
+    console.log('Making API request to:', url);
+    
     // Use the standard Headers object for type safety and correctness.
     const headers = new Headers(options.headers);
 
@@ -307,8 +309,9 @@ class ApiService {
       createdAt: string;
     }>;
   }>> {
+    // Use the dedicated public API endpoint
     const param = type === 'slug' ? `slug=${encodeURIComponent(identifier)}` : `domain=${encodeURIComponent(identifier)}`;
-    return this.makeRequest(`/projects?action=public&${param}`, {
+    return this.makeRequest(`/public?action=project&${param}`, {
       method: 'GET',
     }, true); // Public endpoint, no auth needed
   }

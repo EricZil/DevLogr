@@ -302,6 +302,9 @@ export async function getPublicProjectBySlug(slug: string) {
   if (!slug) {
     throw new AppError("Slug parameter is required", 400, "MISSING_SLUG");
   }
+  
+  console.log('Looking for public project with slug:', slug);
+  
   const project = await prisma.project.findUnique({
     where: { slug, visibility: "PUBLIC" },
     select: {
@@ -379,8 +382,20 @@ export async function getPublicProjectBySlug(slug: string) {
     },
   });
   if (!project) {
+    console.log('No public project found with slug:', slug);
+    
+    // Debug: Check if project exists with different visibility
+    const anyProject = await prisma.project.findUnique({ where: { slug } });
+    if (anyProject) {
+      console.log('Project exists but visibility is:', anyProject.visibility);
+    } else {
+      console.log('No project found with slug:', slug);
+    }
+    
     throw new AppError("Project not found or not public", 404, "PROJECT_NOT_FOUND");
   }
+  
+  console.log('Found public project:', { id: project.id, title: project.title, slug: project.slug });
 
   // Parse images JSON for updates
   const processedProject = {
