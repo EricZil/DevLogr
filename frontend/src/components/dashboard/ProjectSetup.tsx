@@ -127,17 +127,12 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
       clearTimeout(debounceTimer);
     }
 
-    setDomainAvailable(null);
-    setIsDomainChecking(false);
-
-    if (!domain || !isValidDomain(domain)) return;
-
     const timer = setTimeout(() => {
       checkCustomDomain(domain);
     }, 500);
 
     setDebounceTimer(timer);
-  }, [debounceTimer]);
+  }, [debounceTimer, checkCustomDomain]);
 
   if (!isOpen) return null;
 

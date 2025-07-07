@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { api, domainUtils } from '@/lib/api';
 import LoadingScreen from '@/components/shared/ui/LoadingScreen';
 
@@ -135,9 +136,11 @@ export default function PublicProjectPage() {
               <div className="flex items-center space-x-4 text-sm text-gray-400">
                 <div className="flex items-center space-x-2">
                   {project.user.avatar && (
-                    <img 
+                    <Image 
                       src={project.user.avatar} 
                       alt={project.user.name}
+                      width={24}
+                      height={24}
                       className="w-6 h-6 rounded-full"
                     />
                   )}
@@ -225,10 +228,12 @@ export default function PublicProjectPage() {
                   {update.images.length > 0 && (
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       {update.images.map((image, index) => (
-                        <img
+                        <Image
                           key={index}
                           src={image}
                           alt=""
+                          width={300}
+                          height={200}
                           className="rounded-lg border border-white/10"
                         />
                       ))}

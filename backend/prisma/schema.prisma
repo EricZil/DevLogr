@@ -63,7 +63,6 @@ model User {
   
   projects     Project[]
   sessions     Session[]
-  apiKeys      ApiKey[]
   taskComments TaskComment[]
   timeEntries  TimeEntry[]
   issueComments IssueComment[]
@@ -109,21 +108,6 @@ model Session {
   @@map("sessions")
 }
 
-model ApiKey {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  key         String   @unique
-  permissions String   @db.Text
-  lastUsed    DateTime?
-  expiresAt   DateTime?
-  isActive    Boolean  @default(true)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@map("api_keys")
-}
 
 enum ProjectStatus {
   DRAFT
@@ -387,20 +371,6 @@ model ProjectTag {
   @@unique([projectId, tagId])
   @@index([projectId])
   @@map("project_tags")
-}
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  resource  String?
-  details   String?  @db.Text
-  ipAddress String?
-  userAgent String?  @db.Text
-  
-  createdAt DateTime @default(now())
-  
-  @@map("audit_logs")
 }
 
 

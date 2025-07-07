@@ -374,7 +374,7 @@ export default function ProjectManagement() {
             </div>
             <div className="flex items-center space-x-4">
               <a
-                href={`/projects/${project.slug}`}
+                href={`https://${project.slug}.devlogr.space`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all duration-300"
@@ -548,7 +548,6 @@ export default function ProjectManagement() {
                       Project Slug
                     </label>
                     <div className="flex items-center space-x-2">
-                      <span className="text-zinc-500 text-sm">devlogr.com/projects/</span>
                       <input
                         type="text"
                         value={project.slug}
@@ -556,8 +555,9 @@ export default function ProjectManagement() {
                         className="flex-1 bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                         placeholder="project-slug"
                       />
+                      <span className="text-zinc-500 text-sm">.devlogr.space</span>
                     </div>
-                    <p className="text-xs text-zinc-500 mt-2">This will be your project&apos;s public URL</p>
+                    <p className="text-xs text-zinc-500 mt-2">Your project will be available at {project.slug}.devlogr.space</p>
                   </div>
                 </div>
                 

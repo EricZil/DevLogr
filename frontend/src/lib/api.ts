@@ -240,7 +240,51 @@ class ApiService {
     return this.makeRequest(`/projects/${projectId}?action=domain-status`);
   }
 
-  async getPublicProject(identifier: string, type: 'slug' | 'domain'): Promise<ApiResponse<any>> {
+  async getPublicProject(identifier: string, type: 'slug' | 'domain'): Promise<ApiResponse<{
+    id: string;
+    title: string;
+    description: string | null;
+    slug: string;
+    progress: number;
+    banner: string | null;
+    status: string;
+    allowIssues: boolean;
+    allowFeedback: boolean;
+    customDomain: string | null;
+    domainVerified: boolean;
+    startDate: string;
+    endDate: string | null;
+    user: {
+      name: string;
+      username: string | null;
+      avatar: string | null;
+    };
+    tags: Array<{ tag: { name: string } }>;
+    updates: Array<{
+      id: string;
+      title: string;
+      content: string;
+      type: string;
+      images: string[];
+      createdAt: string;
+    }>;
+    milestones: Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      dueDate: string | null;
+      completedAt: string | null;
+      progress: number;
+    }>;
+    feedback: Array<{
+      id: string;
+      message: string;
+      rating: number | null;
+      category: string;
+      submitterName: string | null;
+      createdAt: string;
+    }>;
+  }>> {
     const param = type === 'slug' ? `slug=${encodeURIComponent(identifier)}` : `domain=${encodeURIComponent(identifier)}`;
     return this.makeRequest(`/projects?action=public&${param}`, {
       method: 'GET',
