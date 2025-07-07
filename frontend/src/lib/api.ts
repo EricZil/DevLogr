@@ -50,6 +50,7 @@ interface CreateProjectData {
   tags?: string[];
   allowIssues: boolean;
   allowFeedback: boolean;
+  customDomain?: string;
 }
 
 class ApiService {
@@ -246,6 +247,28 @@ class ApiService {
     }, true); // This is a public endpoint, so skip auth
   }
 
+  async verifyProjectDomain(projectId: string): Promise<ApiResponse<{ verified: boolean; message: string }>> {
+    return this.makeRequest<{ verified: boolean; message: string }>(`/projects/${projectId}?action=verify-domain`, {
+      method: 'POST',
+    });
+  }
+
+  async getDomainVerificationStatus(projectId: string): Promise<ApiResponse<{ 
+    customDomain: string | null; 
+    domainVerified: boolean; 
+    sslEnabled: boolean; 
+    hasCustomDomain: boolean 
+  }>> {
+    return this.makeRequest(`/projects/${projectId}?action=domain-status`);
+  }
+
+  async getPublicProject(identifier: string, type: 'slug' | 'domain'): Promise<ApiResponse<any>> {
+    const param = type === 'slug' ? `slug=${encodeURIComponent(identifier)}` : `domain=${encodeURIComponent(identifier)}`;
+    return this.makeRequest(`/projects?action=public&${param}`, {
+      method: 'GET',
+    }, true); // Public endpoint, no auth needed
+  }
+
   // Update methods - Updated to use new consolidated backend structure
   async getRecentUpdates(limit: number): Promise<ApiResponse<ProjectUpdate[]>> {
     return this.makeRequest(`/updates?action=recent&limit=${limit}`);
@@ -316,4 +339,58 @@ class ApiService {
 }
 
 export const api = new ApiService();
-export type { User, AuthTokens, RegisterData, LoginData, ApiResponse, CreateProjectData }; 
+export type { User, AuthTokens, RegisterData, LoginData, ApiResponse, CreateProjectData };
+
+// Domain detection utilities for handling subdomains and custom domains
+export const domainUtils = {
+  // Detect if we're on a subdomain vs main domain vs custom domain
+  getDomainInfo(): { 
+    type: 'main' | 'subdomain' | 'custom';
+    slug?: string;
+    customDomain?: string;
+  } {
+    if (typeof window === 'undefined') {
+      return { type: 'main' }; // SSR fallback
+    }
+
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
+    
+    // For local development
+    if (isLocalhost) {
+      return { type: 'main' };
+    }
+
+    // Check if it's our main domain
+    if (hostname === 'devlogr.space' || hostname === 'www.devlogr.space') {
+      return { type: 'main' };
+    }
+
+    // Check if it's a subdomain of devlogr.space
+    if (hostname.endsWith('.devlogr.space')) {
+      const slug = hostname.replace('.devlogr.space', '');
+      // Skip API and proxy subdomains
+      if (slug === 'api' || slug === 'proxy' || slug === 'www') {
+        return { type: 'main' };
+      }
+      return { type: 'subdomain', slug };
+    }
+
+    // Otherwise it's a custom domain
+    return { type: 'custom', customDomain: hostname };
+  },
+
+  // Check if current domain should show public project page
+  shouldShowPublicProject(): boolean {
+    const { type } = this.getDomainInfo();
+    return type === 'subdomain' || type === 'custom';
+  },
+
+  // Get the project identifier (slug for subdomain, domain for custom)
+  getProjectIdentifier(): string | null {
+    const { type, slug, customDomain } = this.getDomainInfo();
+    if (type === 'subdomain') return slug || null;
+    if (type === 'custom') return customDomain || null;
+    return null;
+  }
+}; 

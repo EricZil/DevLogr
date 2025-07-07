@@ -11,6 +11,9 @@ import {
   removeTagFromProject,
   checkSlugAvailability,
   getPublicProjectBySlug,
+  getPublicProjectByDomain,
+  verifyProjectDomain,
+  getDomainVerificationStatus,
 } from "../src/services/project.service";
 import {
   getTasksForProject,
@@ -79,15 +82,24 @@ export default async function handler(
       return res.status(200).json(result);
     }
 
-    // Handle public project by slug
-    if (action === 'public' && typeof slug === 'string') {
+    // Handle public project by slug or domain
+    if (action === 'public') {
       if (req.method !== "GET") {
         res.setHeader("Allow", ["GET"]);
         return res.status(405).json({ error: "Method not allowed" });
       }
 
-      const project = await getPublicProjectBySlug(slug);
-      return res.status(200).json(project);
+      const { slug: slugParam, domain } = req.query;
+      
+      if (typeof slugParam === 'string') {
+        const project = await getPublicProjectBySlug(slugParam);
+        return res.status(200).json(project);
+      } else if (typeof domain === 'string') {
+        const project = await getPublicProjectByDomain(domain);
+        return res.status(200).json(project);
+      } else {
+        return res.status(400).json({ error: "Either slug or domain parameter is required" });
+      }
     }
 
     // Handle specific project operations
@@ -139,6 +151,28 @@ export default async function handler(
 
       const project = await updateProjectTimeline(id, userId, req.body);
       return res.status(200).json(project);
+    }
+
+    // Handle domain verification
+    if (action === 'verify-domain') {
+      if (req.method !== "POST") {
+        res.setHeader("Allow", ["POST"]);
+        return res.status(405).json({ error: "Method not allowed" });
+      }
+
+      const result = await verifyProjectDomain(id, userId);
+      return res.status(200).json(result);
+    }
+
+    // Handle domain verification status
+    if (action === 'domain-status') {
+      if (req.method !== "GET") {
+        res.setHeader("Allow", ["GET"]);
+        return res.status(405).json({ error: "Method not allowed" });
+      }
+
+      const result = await getDomainVerificationStatus(id, userId);
+      return res.status(200).json(result);
     }
 
     // Handle tasks

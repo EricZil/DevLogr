@@ -1,6 +1,10 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../lib/error-handler";
 import { z } from "zod";
+import { promisify } from "util";
+import { lookup } from "dns";
+
+const dnsLookup = promisify(lookup);
 
 // ===========================
 // UTILITY FUNCTIONS
@@ -43,6 +47,28 @@ async function verifyProjectOwnership(projectId: string, userId: string) {
   return project;
 }
 
+// Domain verification using DNS lookup (free plan friendly)
+async function verifyCustomDomain(domain: string): Promise<boolean> {
+  try {
+    // Remove protocol if present
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
+    // Lookup the domain's IP
+    const result = await dnsLookup(cleanDomain);
+    
+    // Also lookup our proxy domain to compare
+    const proxyResult = await dnsLookup('proxy.devlogr.space');
+    
+    // Check if the domain resolves to the same IP as our proxy
+    // On Cloudflare, both should resolve to Cloudflare IPs
+    // We can also check if it's a Cloudflare IP range (but keeping it simple for now)
+    return result.address === proxyResult.address;
+  } catch (error) {
+    console.error('Domain verification error:', error);
+    return false;
+  }
+}
+
 // ===========================
 // ZOD VALIDATION SCHEMAS
 // ===========================
@@ -54,6 +80,7 @@ const createProjectSchema = z.object({
   allowIssues: z.boolean().default(true),
   allowFeedback: z.boolean().default(true),
   tags: z.array(z.string()).optional(),
+  customDomain: z.string().optional(),
 });
 
 const updateBasicInfoSchema = z.object({
@@ -110,7 +137,7 @@ export async function getProjectsForUser(userId: string) {
 }
 
 export async function createProject(userId: string, projectData: any) {
-  const { name, description, visibility, allowIssues, allowFeedback, tags } =
+  const { name, description, visibility, allowIssues, allowFeedback, tags, customDomain } =
     createProjectSchema.parse(projectData);
 
   let slug = generateSlug(name);
@@ -129,6 +156,9 @@ export async function createProject(userId: string, projectData: any) {
       visibility,
       allowIssues,
       allowFeedback,
+      customDomain: customDomain || null,
+      domainVerified: false,
+      sslEnabled: false,
       startDate: new Date(),
     },
     select: {
@@ -137,6 +167,8 @@ export async function createProject(userId: string, projectData: any) {
       slug: true,
       status: true,
       visibility: true,
+      customDomain: true,
+      domainVerified: true,
     },
   });
 
@@ -369,9 +401,210 @@ export async function getPublicProjectBySlug(slug: string) {
   return processedProject;
 }
 
+export async function getPublicProjectByDomain(domain: string) {
+  if (!domain) {
+    throw new AppError("Domain parameter is required", 400, "MISSING_DOMAIN");
+  }
+  const project = await prisma.project.findFirst({
+    where: { 
+      customDomain: domain, 
+      domainVerified: true,
+      visibility: "PUBLIC" 
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      slug: true,
+      status: true,
+      visibility: true,
+      progress: true,
+      banner: true,
+      theme: true,
+      allowIssues: true,
+      allowFeedback: true,
+      customDomain: true,
+      domainVerified: true,
+      startDate: true,
+      endDate: true,
+      user: { select: { name: true, username: true, avatar: true } },
+      tags: { select: { tag: { select: { name: true } } } },
+      milestones: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          dueDate: true,
+          completedAt: true,
+          progress: true,
+          tasks: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              status: true,
+              priority: true,
+              dueDate: true,
+              completedAt: true,
+              estimatedHours: true,
+              subtasks: {
+                select: {
+                  id: true,
+                  title: true,
+                  completed: true,
+                }
+              },
+              _count: { select: { comments: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { dueDate: 'asc' },
+      },
+      updates: {
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          type: true,
+          images: true, // JSON string field
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      feedback: {
+        select: {
+          id: true,
+          message: true,
+          rating: true,
+          category: true,
+          submitterName: true,
+          submitterEmail: true,
+          createdAt: true,
+          _count: { select: { comments: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  });
+  if (!project) {
+    throw new AppError("Project not found, domain not verified, or not public", 404, "PROJECT_NOT_FOUND");
+  }
+
+  // Parse images JSON for updates
+  const processedProject = {
+    ...project,
+    updates: project.updates.map(update => ({
+      ...update,
+      images: update.images ? 
+        (() => {
+          try {
+            return JSON.parse(update.images);
+          } catch {
+            return [];
+          }
+        })() : []
+    }))
+  };
+
+  return processedProject;
+}
+
 export async function checkSlugAvailability(slug: string) {
-    if (!slug) {
-        throw new AppError('Slug parameter is required', 400, 'MISSING_SLUG');
+  try {
+    const available = await isSlugAvailable(slug);
+    return {
+      success: true,
+      data: { available }
+    };
+  } catch (error) {
+    console.error('Error checking slug availability:', error);
+    return {
+      success: false,
+      message: 'Failed to check slug availability'
+    };
+  }
+}
+
+export async function verifyProjectDomain(projectId: string, userId: string) {
+  try {
+    const project = await verifyProjectOwnership(projectId, userId);
+    
+    if (!project.customDomain) {
+      throw new AppError(
+        "No custom domain configured for this project",
+        400,
+        "NO_CUSTOM_DOMAIN"
+      );
     }
-    return { available: await isSlugAvailable(slug) };
+
+    if (project.domainVerified) {
+      return {
+        success: true,
+        data: { verified: true, message: "Domain already verified" }
+      };
+    }
+
+    const isVerified = await verifyCustomDomain(project.customDomain);
+    
+    if (isVerified) {
+      // Update the project to mark domain as verified
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { 
+          domainVerified: true,
+          sslEnabled: true // Cloudflare handles SSL automatically
+        }
+      });
+
+      return {
+        success: true,
+        data: { verified: true, message: "Domain verified successfully!" }
+      };
+    } else {
+      return {
+        success: true,
+        data: { 
+          verified: false, 
+          message: "Domain not pointing to our servers yet. Please ensure your domain points to proxy.devlogr.space" 
+        }
+      };
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    console.error('Error verifying domain:', error);
+    throw new AppError(
+      "Failed to verify domain",
+      500,
+      "DOMAIN_VERIFICATION_ERROR"
+    );
+  }
+}
+
+export async function getDomainVerificationStatus(projectId: string, userId: string) {
+  try {
+    const project = await verifyProjectOwnership(projectId, userId);
+    
+    return {
+      success: true,
+      data: {
+        customDomain: project.customDomain,
+        domainVerified: project.domainVerified,
+        sslEnabled: project.sslEnabled,
+        hasCustomDomain: !!project.customDomain
+      }
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    console.error('Error getting domain status:', error);
+    throw new AppError(
+      "Failed to get domain verification status",
+      500,
+      "DOMAIN_STATUS_ERROR"
+    );
+  }
 } 
