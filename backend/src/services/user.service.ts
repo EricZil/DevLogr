@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/lib/error-handler";
+import { prisma } from "../lib/prisma";
+import { AppError } from "../lib/error-handler";
 
 export async function getUserProfile(userId: string) {
   const user = await prisma.user.findUnique({
