@@ -172,31 +172,28 @@ class ApiService {
     }
   }
 
-  // Auth methods
+  // Auth methods - Updated to use new consolidated backend structure
   async register(userData: RegisterData): Promise<ApiResponse<{ user: User; tokens: AuthTokens }>> {
-    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth/register', {
+    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth?action=register', {
       method: 'POST',
       body: JSON.stringify(userData),
     }, true);
   }
 
   async login(credentials: LoginData): Promise<ApiResponse<{ user: User; tokens: AuthTokens }>> {
-    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth/login', {
+    return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth?action=login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     }, true);
   }
 
   async logout(): Promise<ApiResponse> {
-    // The Authorization header is now added automatically by makeRequest.
-    return this.makeRequest('/auth/logout', {
+    return this.makeRequest('/auth?action=logout', {
       method: 'POST',
     });
   }
 
   async getCurrentUser(): Promise<ApiResponse<User>> {
-    // The Authorization header is now added automatically by makeRequest.
-    // We still check for the token first to avoid an unnecessary network call.
     const token = this.getAccessToken();
     if (!token) {
       return {
@@ -206,7 +203,7 @@ class ApiService {
       };
     }
 
-    return this.makeRequest<User>('/auth/me');
+    return this.makeRequest<User>('/auth?action=me');
   }
 
   async refreshToken(): Promise<ApiResponse<{ tokens: AuthTokens }>> {
@@ -219,7 +216,7 @@ class ApiService {
       };
     }
 
-    const response = await this.makeRequest<{ tokens: AuthTokens }>('/auth/refresh-token', {
+    const response = await this.makeRequest<{ tokens: AuthTokens }>('/auth?action=refresh-token', {
       method: 'POST',
       body: JSON.stringify({ token: refreshToken }),
     }, true);
@@ -232,7 +229,7 @@ class ApiService {
     return response;
   }
 
-  // Project methods
+  // Project methods - Updated to use new consolidated backend structure
   async getProjects(): Promise<ApiResponse<ProjectData[]>> {
     return this.makeRequest('/projects');
   }
@@ -245,14 +242,14 @@ class ApiService {
   }
 
   async checkSlugAvailability(slug: string): Promise<ApiResponse<{ available: boolean }>> {
-    return this.makeRequest(`/projects/check-slug/${slug}`, {
+    return this.makeRequest(`/projects?action=check-slug&slug=${encodeURIComponent(slug)}`, {
         method: 'GET',
     }, true); // This is a public endpoint, so skip auth
   }
 
-  // Update methods
+  // Update methods - Updated to use new consolidated backend structure
   async getRecentUpdates(limit: number): Promise<ApiResponse<ProjectUpdate[]>> {
-    return this.makeRequest(`/updates/recent?limit=${limit}`);
+    return this.makeRequest(`/updates?action=recent&limit=${limit}`);
   }
 
   // Token management
