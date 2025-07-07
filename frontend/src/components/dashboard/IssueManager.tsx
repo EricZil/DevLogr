@@ -34,9 +34,7 @@ interface IssueManagerProps {
   projectId: string;
 }
 
-type ApiWithKey = {
-  getApiKey: () => Promise<string>;
-};
+
 
 const getStatusColor = (status: Issue['status']) => {
   switch (status) {
@@ -145,12 +143,10 @@ export default function IssueManager({ projectId }: IssueManagerProps) {
     try {
       setLoading(true);
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/issues`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=issues`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -174,12 +170,10 @@ export default function IssueManager({ projectId }: IssueManagerProps) {
     try {
       setLoadingComments(true);
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/issues/${issueId}/comments`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/issues?id=${issueId}&action=comments`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -198,14 +192,12 @@ export default function IssueManager({ projectId }: IssueManagerProps) {
   const updateIssue = async (id: string, fields: Partial<Issue>) => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/issues/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/issues?id=${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify(fields),
@@ -227,13 +219,11 @@ export default function IssueManager({ projectId }: IssueManagerProps) {
     if (!selectedIssue || !comment.trim()) return;
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/issues/${selectedIssue.id}/comments`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/issues?id=${selectedIssue.id}&action=comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify({ content: comment.trim() }),

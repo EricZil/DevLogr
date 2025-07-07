@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
 
 import { useNotification } from '@/contexts/NotificationContext';
-import { Milestone, Task, ApiWithKey } from '@/types';
+import { Milestone, Task } from '@/types';
 
 // Import EnterpriseKanban with SSR disabled
 const EnterpriseKanban = dynamic(
@@ -54,11 +54,9 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const fetchMilestones = useCallback(async () => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/milestones`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=milestones`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -76,11 +74,9 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const fetchStats = useCallback(async () => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/milestones/stats`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=milestones&subaction=stats`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -97,11 +93,9 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     try {
       setLoadingTasks(true);
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/tasks`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=tasks`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -127,11 +121,9 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     try {
       setLoadingTasks(true);
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones/${milestoneId}/tasks`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones?id=${milestoneId}&action=tasks`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
@@ -150,14 +142,12 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const handleTaskMove = async (taskId: string, newStatus: Task['status']) => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks/${taskId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks?id=${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify({ status: newStatus })
@@ -222,14 +212,12 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
 
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${projectId}/milestones`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=milestones`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -257,14 +245,12 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const updateMilestone = async (milestone: Milestone) => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones/${milestone.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones?id=${milestone.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -294,13 +280,11 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
 
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones/${milestoneId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones?id=${milestoneId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-API-Key': apiKey,
         },
         credentials: 'include',
       });
