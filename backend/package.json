@@ -5,7 +5,10 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "scripts": {},
+  "scripts": {
+    "build": "prisma generate && echo 'Prisma Client generated successfully'",
+    "postinstall": "prisma generate"
+  },
   "dependencies": {
     "@prisma/client": "^6.11.1",
     "@types/cors": "^2.8.19",
