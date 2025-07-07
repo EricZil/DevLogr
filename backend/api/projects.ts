@@ -90,17 +90,17 @@ export default async function handler(
       
       if (typeof slugParam === 'string') {
         const project = await getPublicProjectBySlug(slugParam);
-        return res.status(200).json(project);
+        return res.status(200).json({ success: true, data: project });
       } else if (typeof domain === 'string') {
         const project = await getPublicProjectByDomain(domain);
-        return res.status(200).json(project);
+        return res.status(200).json({ success: true, data: project });
       } else {
-        return res.status(400).json({ error: "Either slug or domain parameter is required" });
+        return res.status(400).json({ success: false, error: "Either slug or domain parameter is required" });
       }
     }
 
     if (typeof id !== "string") {
-      return res.status(400).json({ error: "Invalid project ID" });
+      return res.status(400).json({ success: false, error: "Invalid project ID" });
     }
 
     const userId = getUserIdFromToken(req);
@@ -112,7 +112,7 @@ export default async function handler(
       }
 
       const project = await getProjectBasicInfo(id, userId);
-      return res.status(200).json(project);
+      return res.status(200).json({ success: true, data: project });
     }
 
     if (action === 'basic-info') {
@@ -122,7 +122,7 @@ export default async function handler(
       }
 
       const project = await updateProjectBasicInfo(id, userId, req.body);
-      return res.status(200).json(project);
+      return res.status(200).json({ success: true, data: project });
     }
 
     if (action === 'status') {
@@ -132,7 +132,7 @@ export default async function handler(
       }
 
       const project = await updateProjectStatus(id, userId, req.body);
-      return res.status(200).json(project);
+      return res.status(200).json({ success: true, data: project });
     }
 
     if (action === 'timeline') {
@@ -142,7 +142,7 @@ export default async function handler(
       }
 
       const project = await updateProjectTimeline(id, userId, req.body);
-      return res.status(200).json(project);
+      return res.status(200).json({ success: true, data: project });
     }
 
     if (action === 'verify-domain') {
@@ -172,18 +172,18 @@ export default async function handler(
       }
 
       const tasks = await getTasksForProject(id, userId);
-      return res.status(200).json(tasks);
+      return res.status(200).json({ success: true, data: tasks });
     }
 
     if (action === 'issues') {
       switch (req.method) {
         case "GET":
           const issues = await getIssuesForOwner(id, userId);
-          return res.status(200).json(issues);
+          return res.status(200).json({ success: true, data: issues });
 
         case "POST":
           const newIssue = await createIssueForOwner(id, userId, req.body);
-          return res.status(201).json(newIssue);
+          return res.status(201).json({ success: true, data: newIssue });
 
         default:
           res.setHeader("Allow", ["GET", "POST"]);
@@ -198,7 +198,7 @@ export default async function handler(
       }
 
       const feedback = await getFeedbackForOwner(id, userId);
-      return res.status(200).json(feedback);
+      return res.status(200).json({ success: true, data: feedback });
     }
 
     if (action === 'tags') {
@@ -215,14 +215,14 @@ export default async function handler(
       switch (req.method) {
         case "GET":
           const tags = await getProjectTags(id, userId);
-          return res.status(200).json(tags);
+          return res.status(200).json({ success: true, data: tags });
 
         case "POST":
           if (!req.body || !req.body.tagName) {
-            return res.status(400).json({ error: "tagName is required" });
+            return res.status(400).json({ success: false, error: "tagName is required" });
           }
           const newTag = await addTagToProject(id, userId, req.body.tagName);
-          return res.status(201).json(newTag);
+          return res.status(201).json({ success: true, data: newTag });
 
         default:
           res.setHeader("Allow", ["GET", "POST"]);
@@ -238,17 +238,17 @@ export default async function handler(
         }
 
         const stats = await getMilestoneStats(id, userId);
-        return res.status(200).json(stats);
+        return res.status(200).json({ success: true, data: stats });
       }
 
       switch (req.method) {
         case "GET":
           const milestones = await getMilestonesForProject(id, userId);
-          return res.status(200).json(milestones);
+          return res.status(200).json({ success: true, data: milestones });
 
         case "POST":
           const newMilestone = await createMilestone(id, userId, req.body);
-          return res.status(201).json(newMilestone);
+          return res.status(201).json({ success: true, data: newMilestone });
 
         default:
           res.setHeader("Allow", ["GET", "POST"]);
@@ -264,17 +264,17 @@ export default async function handler(
         }
 
         const stats = await getUpdateStats(id, userId);
-        return res.status(200).json(stats);
+        return res.status(200).json({ success: true, data: stats });
       }
 
       switch (req.method) {
         case "GET":
           const updates = await getUpdatesForProject(id, userId);
-          return res.status(200).json(updates);
+          return res.status(200).json({ success: true, data: updates });
 
         case "POST":
           const newUpdate = await createUpdate(id, userId, req.body);
-          return res.status(201).json(newUpdate);
+          return res.status(201).json({ success: true, data: newUpdate });
 
         default:
           res.setHeader("Allow", ["GET", "POST"]);
@@ -282,15 +282,14 @@ export default async function handler(
       }
     }
 
-    return res.status(404).json({ error: "Project action not found" });
+    return res.status(404).json({ success: false, error: "Project action not found" });
 
   } catch (error) {
     if (error instanceof AppError) {
       return res
         .status(error.statusCode)
-        .json({ error: error.message, code: error.code });
+        .json({ success: false, message: error.message, error: error.message, code: error.code });
     }
-    console.error("gj server gg (internal err):", error);
-    return res.status(500).json({ error: "gj server gg (internal err)" });
+    return res.status(500).json({ success: false, message: "GG", error: "gj server gg (internal err)" });
   }
 } 

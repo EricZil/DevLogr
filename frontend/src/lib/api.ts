@@ -366,9 +366,13 @@ export const domainUtils = {
     }
 
     const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
+    const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1') || hostname.endsWith('.localhost');
     
     if (isLocalhost) {
+      if (hostname.includes('.localhost')) {
+        const slug = hostname.split('.localhost')[0];
+        return { type: 'subdomain', slug };
+      }
       return { type: 'main' };
     }
 

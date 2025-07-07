@@ -65,21 +65,31 @@ export default function PublicProjectPage() {
         const domainInfo = domainUtils.getDomainInfo();
         const identifier = domainUtils.getProjectIdentifier();
 
+        console.log('Domain:', {
+          hostname: window.location.hostname,
+          domainInfo,
+          identifier
+        });
+
         if (!identifier) {
           throw new Error('No project identifier found');
         }
 
         let response;
         if (domainInfo.type === 'subdomain') {
+          console.log('project slug:', identifier);
           response = await api.getPublicProject(identifier, 'slug');
         } else if (domainInfo.type === 'custom') {
+          console.log('project domain:', identifier);
           response = await api.getPublicProject(identifier, 'domain');
         } else {
           throw new Error('Invalid domain type');
         }
 
+        console.log('API resp:', response);
+
         if (!response.success || !response.data) {
-          throw new Error(response.message || 'Project not found');
+          throw new Error(response.message || response.error || 'Project not found');
         }
 
         setProject(response.data);
@@ -99,13 +109,32 @@ export default function PublicProjectPage() {
   }
 
   if (error) {
+    const domainInfo = domainUtils.getDomainInfo();
+    const identifier = domainUtils.getProjectIdentifier();
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-lg mx-auto px-6">
           <h1 className="text-4xl font-bold text-white mb-4">Project Not Found</h1>
           <p className="text-gray-400 mb-6">{error}</p>
-          <div className="text-sm text-gray-500">
-            This project may be private, deleted, or the domain may not be properly configured.
+          <div className="text-sm text-gray-500 space-y-2">
+            <p>This project may be:</p>
+            <ul className="list-disc list-inside text-left space-y-1">
+              <li>Private or not yet published</li>
+              <li>Deleted or moved</li>
+              <li>Not properly configured</li>
+              {domainInfo.type === 'subdomain' && (
+                <li>The subdomain "{identifier}" doesn't have a project associated with it</li>
+              )}
+            </ul>
+          </div>
+          <div className="mt-8">
+            <a 
+              href="https://devlogr.space" 
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              ← Back to DevLogr
+            </a>
           </div>
         </div>
       </div>
