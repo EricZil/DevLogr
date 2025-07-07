@@ -29,7 +29,7 @@ const corsMiddleware = cors({
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Allowed methods
   credentials: true, // Allow cookies to be sent
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'], // Allowed headers
 });
 
 /**
