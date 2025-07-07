@@ -289,6 +289,30 @@ class ApiService {
     if (!expiry) return 0;
     return Math.max(0, Math.floor((parseInt(expiry) - Date.now()) / (60 * 1000)));
   }
+
+  // Get API key for authenticated requests (returns access token)
+  async getApiKey(): Promise<string> {
+    const token = this.getAccessToken();
+    if (!token) {
+      throw new Error('No access token available');
+    }
+    
+    // Check if token is expired and try to refresh
+    if (this.isTokenExpired()) {
+      const refreshSuccess = await this.attemptTokenRefresh();
+      if (refreshSuccess) {
+        const newToken = this.getAccessToken();
+        if (!newToken) {
+          throw new Error('Failed to refresh token');
+        }
+        return newToken;
+      } else {
+        throw new Error('Token expired and refresh failed');
+      }
+    }
+    
+    return token;
+  }
 }
 
 export const api = new ApiService();
