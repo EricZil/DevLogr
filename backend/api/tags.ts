@@ -17,7 +17,10 @@ export default async function handler(
         }
 
         const tags = await getPopularTags();
-        return res.status(200).json(tags);
+        return res.status(200).json({
+          success: true,
+          data: tags
+        });
 
       default:
         return res.status(404).json({ error: "Tag action not found" });

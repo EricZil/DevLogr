@@ -31,12 +31,20 @@ export default function HeroSection() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-gradient-to-r from-white via-zinc-100 to-zinc-200 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-zinc-100 hover:to-zinc-300 transition-all duration-300 hover:scale-105 shadow-2xl">
+              <a 
+                href="/auth" 
+                className="bg-gradient-to-r from-white via-zinc-100 to-zinc-200 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-zinc-100 hover:to-zinc-300 transition-all duration-300 hover:scale-105 shadow-2xl text-center"
+              >
                 Start Your DevLog
-              </button>
-              <button className="border border-zinc-600 bg-zinc-900/30 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold text-lg hover:border-zinc-500 hover:bg-zinc-800/50 transition-all duration-300 hover:scale-105 shadow-xl">
-                View Examples
-              </button>
+              </a>
+              <a 
+                href="https://devlogr.devlogr.space/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="border border-zinc-600 bg-zinc-900/30 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold text-lg hover:border-zinc-500 hover:bg-zinc-800/50 transition-all duration-300 hover:scale-105 shadow-xl text-center"
+              >
+                View Live Example
+              </a>
             </div>
             
             {/* Additional hero features */}
