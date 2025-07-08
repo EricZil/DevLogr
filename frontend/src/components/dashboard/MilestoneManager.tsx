@@ -51,18 +51,35 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const fetchMilestones = useCallback(async () => {
     try {
       const token = api.getAccessToken();
+      if (!token) {
+        console.log('No access token available for fetching milestones');
+        setLoading(false);
+        return;
+      }
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=milestones`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         credentials: 'include',
       });
+      
       if (response.ok) {
-        const data: Milestone[] = await response.json();
-        setMilestones(data);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setMilestones(result.data);
+        } else {
+          console.error('Invalid milestones response format:', result);
+          setMilestones([]);
+        }
+      } else {
+        console.error('Failed to fetch milestones:', response.status, response.statusText);
+        setMilestones([]);
       }
     } catch (err) {
       console.error('Failed to fetch milestones:', err);
+      setMilestones([]);
     } finally {
       setLoading(false);
     }
@@ -71,15 +88,28 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const fetchStats = useCallback(async () => {
     try {
       const token = api.getAccessToken();
+      if (!token) {
+        console.log('No access token available for fetching stats');
+        return;
+      }
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=milestones&subaction=stats`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         credentials: 'include',
       });
+      
       if (response.ok) {
-        const data: MilestoneStats = await response.json();
-        setStats(data);
+        const result = await response.json();
+        if (result.success && result.data) {
+          setStats(result.data);
+        } else {
+          console.error('Invalid stats response format:', result);
+        }
+      } else {
+        console.error('Failed to fetch stats:', response.status, response.statusText);
       }
     } catch (err) {
       console.error('Failed to fetch stats:', err);
@@ -90,18 +120,35 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     try {
       setLoadingTasks(true);
       const token = api.getAccessToken();
+      if (!token) {
+        console.log('No access token available for fetching tasks');
+        setLoadingTasks(false);
+        return;
+      }
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=tasks`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         credentials: 'include',
       });
+      
       if (response.ok) {
-        const data: Task[] = await response.json();
-        setAllTasks(data);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setAllTasks(result.data);
+        } else {
+          console.error('Invalid tasks response format:', result);
+          setAllTasks([]);
+        }
+      } else {
+        console.error('Failed to fetch tasks:', response.status, response.statusText);
+        setAllTasks([]);
       }
     } catch (err) {
       console.error('Failed to fetch tasks:', err);
+      setAllTasks([]);
     } finally {
       setLoadingTasks(false);
     }

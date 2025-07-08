@@ -3,93 +3,77 @@ import React from 'react';
 interface KpiCardProps {
   title: string;
   value: string | number;
-  diff?: number;
+  trend?: string;
   progress?: number;
-  icon?: React.ReactNode;
-  className?: string;
   sparklineData?: number[];
+  className?: string;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({
-  title,
-  value,
-  diff,
-  progress,
-  icon,
-  className = '',
-  sparklineData,
-}) => {
-  const radius = 28;
-  const stroke = 4;
-  const normalizedRadius = radius - stroke * 0.5;
-  const circumference = normalizedRadius * 2 * Math.PI;
-  const dashOffset = progress !== undefined
-    ? circumference - (progress / 100) * circumference
-    : 0;
-
-  const diffColor = diff !== undefined ? (diff >= 0 ? 'text-emerald-400' : 'text-rose-400') : '';
-
+export default function KpiCard({ 
+  title, 
+  value, 
+  trend, 
+  progress, 
+  sparklineData, 
+  className = ""
+}: KpiCardProps) {
   return (
-    <div
-      className={`relative col-span-12 sm:col-span-6 lg:col-span-3 flex flex-col justify-between rounded-2xl p-6
-                  bg-white/5 backdrop-blur-md ring-1 ring-inset ring-white/10 shadow-sm transition
-                  hover:shadow-md hover:scale-[1.02] ${className}`}
-    >
-      <p className="text-sm font-medium text-gray-300 truncate">{title}</p>
-      <div className="mt-2 flex items-end gap-2">
-        <span className="text-3xl font-semibold text-white leading-none">{value}</span>
-        {diff !== undefined && (
-          <span className={`text-sm leading-none ${diffColor}`}>{diff >= 0 ? '+' : ''}{diff}%</span>
+    <div className={`rounded-xl p-6 transition-all duration-200 ${className}`}>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-400 mb-1">{title}</h3>
+          <div className="text-3xl font-bold text-white">{value}</div>
+        </div>
+        
+        {trend && (
+          <div className="flex items-center space-x-1 text-green-400 bg-green-500/20 px-2 py-1 rounded-md border border-green-500/30">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <span className="text-sm font-medium">{trend}</span>
+          </div>
         )}
       </div>
-      <div className="absolute right-4 bottom-4 h-12 w-24 flex items-center justify-center">
-        {progress !== undefined ? (
-          <svg
-            width={radius * 2}
-            height={radius * 2}
-            className="transform -rotate-90"
-          >
-            <circle
-              r={normalizedRadius}
-              cx={radius}
-              cy={radius}
-              fill="transparent"
-              stroke="rgba(255,255,255,0.1)"
-              strokeWidth={stroke}
+
+      {progress !== undefined && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-gray-400">Progress</span>
+            <span className="font-medium text-white">{progress}%</span>
+          </div>
+          <div className="w-full bg-white/10 rounded-full h-2">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${progress}%` }}
             />
-            <circle
-              r={normalizedRadius}
-              cx={radius}
-              cy={radius}
-              fill="transparent"
-              stroke="#647eff"
-              strokeWidth={stroke}
-              strokeDasharray={`${circumference} ${circumference}`}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="round"
-              className="transition-all duration-700 ease-out"
-            />
-          </svg>
-        ) : sparklineData && sparklineData.length > 1 ? (
-          <svg width="96" height="32" viewBox="0 0 96 32" fill="none" stroke="#647eff" strokeWidth="2" className="opacity-70">
-            {(() => {
-              const max = Math.max(...sparklineData);
-              const min = Math.min(...sparklineData);
-              const range = max - min || 1;
-              const points = sparklineData.map((v, i) => {
-                const x = (i / (sparklineData.length - 1)) * 96;
-                const y = 32 - ((v - min) / range) * 24 - 4;
-                return `${x},${y}`;
-              }).join(' ');
-              return <polyline points={points} fill="none" strokeLinecap="round" strokeLinejoin="round" />;
-            })()}
-          </svg>
-        ) : (
-          icon
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {sparklineData && sparklineData.length > 0 && (
+        <div className="mt-4">
+          <div className="text-xs text-gray-400 mb-2">7-day trend</div>
+          <div className="h-12 flex items-end space-x-1">
+            {sparklineData.map((value, index) => {
+              const maxValue = Math.max(...sparklineData);
+              const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
+              
+              return (
+                <div
+                  key={index}
+                  className="flex-1 bg-gradient-to-t from-blue-500/40 to-blue-400/60 rounded-sm"
+                  style={{ 
+                    height: `${height}%`,
+                    minHeight: '4px'
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
-export default KpiCard; 
+ 

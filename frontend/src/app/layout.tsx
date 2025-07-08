@@ -16,6 +16,10 @@ async function shouldShowPublicProject(): Promise<boolean> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   
+  if (host === 'localhost' || host.startsWith('localhost:') || host.startsWith('127.0.0.1')) {
+    return false;
+  }
+  
   if (host.endsWith('.devlogr.space')) {
     const slug = host.replace('.devlogr.space', '');
     if (slug === 'api' || slug === 'proxy' || slug === 'www') {
@@ -24,7 +28,7 @@ async function shouldShowPublicProject(): Promise<boolean> {
     return true;
   }
   
-  if (host !== 'devlogr.space' && host !== 'www.devlogr.space' && host !== 'localhost' && !host.startsWith('127.0.0.1')) {
+  if (host !== 'devlogr.space' && host !== 'www.devlogr.space') {
     return true;
   }
   
@@ -40,7 +44,7 @@ export default async function RootLayout({
 
   if (shouldShowPublic) {
     return (
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
           <NotificationProvider>
             <PublicProjectPage />
@@ -51,7 +55,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <NotificationProvider>
           {children}

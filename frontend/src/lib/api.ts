@@ -225,19 +225,73 @@ class ApiService {
     }, true);
   }
 
-  async verifyProjectDomain(projectId: string): Promise<ApiResponse<{ verified: boolean; message: string }>> {
-    return this.makeRequest<{ verified: boolean; message: string }>(`/projects/${projectId}?action=verify-domain`, {
-      method: 'POST',
-    });
-  }
-
   async getDomainVerificationStatus(projectId: string): Promise<ApiResponse<{ 
     customDomain: string | null; 
     domainVerified: boolean; 
     sslEnabled: boolean; 
-    hasCustomDomain: boolean 
+    hasCustomDomain: boolean;
+    verificationDetails: {
+      dnsResolved: boolean;
+      pointsToProxy: boolean;
+      hasCloudflare: boolean;
+      sslAvailable: boolean;
+      lastChecked: string;
+    } | null;
+    instructions: Array<{
+      type: 'CNAME' | 'A_RECORD';
+      name: string;
+      value: string;
+      ttl: number;
+      description: string;
+    }> | null;
+    publicUrl: string;
   }>> {
     return this.makeRequest(`/projects/${projectId}?action=domain-status`);
+  }
+
+  async verifyProjectDomain(projectId: string): Promise<ApiResponse<{
+    verified: boolean;
+    message: string;
+    status: 'verified' | 'pending' | 'failed' | 'invalid';
+    details: {
+      dnsResolved: boolean;
+      pointsToProxy: boolean;
+      hasCloudflare: boolean;
+      sslAvailable: boolean;
+      lastChecked: string;
+    };
+    instructions?: Array<{
+      type: 'CNAME' | 'A_RECORD';
+      name: string;
+      value: string;
+      ttl: number;
+      description: string;
+    }>;
+  }>> {
+    return this.makeRequest(`/projects/${projectId}?action=verify-domain`, {
+      method: 'POST',
+    });
+  }
+
+  async checkDomainAvailability(domain: string): Promise<ApiResponse<{
+    available: boolean;
+    domain?: string;
+    reason?: string;
+    suggestions?: string[];
+    currentStatus?: 'verified' | 'pending' | 'failed' | 'invalid';
+    message?: string;
+    requiresSetup?: boolean;
+    instructions?: Array<{
+      type: 'CNAME' | 'A_RECORD';
+      name: string;
+      value: string;
+      ttl: number;
+      description: string;
+    }>;
+  }>> {
+    return this.makeRequest(`/projects?action=check-domain&domain=${encodeURIComponent(domain)}`, {
+      method: 'GET',
+    }, true);
   }
 
   async getPublicProject(identifier: string, type: 'slug' | 'domain'): Promise<ApiResponse<{
@@ -286,7 +340,7 @@ class ApiService {
     }>;
   }>> {
     const param = type === 'slug' ? `slug=${encodeURIComponent(identifier)}` : `domain=${encodeURIComponent(identifier)}`;
-    return this.makeRequest(`/projects?action=public&${param}`, {
+    return this.makeRequest(`/public?action=project&${param}`, {
       method: 'GET',
     }, true);
   }

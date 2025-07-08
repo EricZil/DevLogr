@@ -10,6 +10,7 @@ import {
   addTagToProject,
   removeTagFromProject,
   checkSlugAvailability,
+  checkDomainAvailability,
   getPublicProjectBySlug,
   getPublicProjectByDomain,
   verifyProjectDomain,
@@ -77,6 +78,21 @@ export default async function handler(
       }
 
       const result = await checkSlugAvailability(slug);
+      return res.status(200).json(result);
+    }
+
+    if (action === 'check-domain') {
+      if (req.method !== "GET") {
+        res.setHeader("Allow", ["GET"]);
+        return res.status(405).json({ error: "Method not allowed" });
+      }
+
+      const { domain } = req.query;
+      if (typeof domain !== 'string') {
+        return res.status(400).json({ success: false, error: "Domain parameter is required" });
+      }
+
+      const result = await checkDomainAvailability(domain);
       return res.status(200).json(result);
     }
 

@@ -29,8 +29,32 @@ export default function ProjectHeader({ projectData, subdomain, onIssueClick, on
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">{projectData.title}</h1>
-              <div className="text-sm text-blue-400">
-                {subdomain}.devlogr.space
+              <div className="flex items-center space-x-3">
+                <div className="text-sm text-blue-400">
+                  {subdomain}.devlogr.space
+                </div>
+                {projectData.customDomain && projectData.domainVerified && (
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs text-zinc-500">•</span>
+                    <div className="text-sm text-emerald-400 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {projectData.customDomain}
+                    </div>
+                  </div>
+                )}
+                {projectData.customDomain && !projectData.domainVerified && (
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs text-zinc-500">•</span>
+                    <div className="text-sm text-amber-400 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      {projectData.customDomain} (pending)
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

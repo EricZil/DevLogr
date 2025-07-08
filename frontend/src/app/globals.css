@@ -199,6 +199,65 @@ html {
   animation: wave-3 10s ease-in-out infinite;
 }
 
+@keyframes dashboard-orb-float {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+    opacity: 0.6;
+  }
+  33% { 
+    transform: translate(30px, -30px) scale(1.1); 
+    opacity: 0.8;
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+    opacity: 0.4;
+  }
+}
+
+@keyframes dashboard-pulse {
+  0%, 100% { 
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes dashboard-grid-shift {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(2px) translateY(-2px);
+  }
+  50% {
+    transform: translateX(-1px) translateY(2px);
+  }
+  75% {
+    transform: translateX(2px) translateY(1px);
+  }
+}
+
+.animate-dashboard-orb {
+  animation: dashboard-orb-float 20s ease-in-out infinite;
+}
+
+.animate-dashboard-pulse {
+  animation: dashboard-pulse 4s ease-in-out infinite;
+}
+
+.animate-dashboard-grid {
+  animation: dashboard-grid-shift 30s ease-in-out infinite;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Floating animation for social orbs */
 @keyframes float-delayed {
   0%, 100% {
@@ -263,4 +322,96 @@ html {
 
 .animate-shine {
   animation: shine 2s ease-in-out infinite;
+}
+
+@media screen and (max-width: 1400px) {
+  .dashboard-header-compact {
+    padding: 1rem 1.5rem;
+  }
+  
+  .dashboard-status-hidden {
+    display: none;
+  }
+  
+  .dashboard-nav-hidden {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 1200px) {
+  .dashboard-spacing-reduced {
+    padding: 1.25rem;
+  }
+  
+  .dashboard-text-reduced {
+    font-size: 0.875rem;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .dashboard-mobile-spacing {
+    padding: 1rem;
+  }
+  
+  .dashboard-grid-stack {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media screen and (min-width: 1920px) {
+  .dashboard-xl-container {
+    max-width: 100rem;
+  }
+}
+
+.glass-enterprise {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.text-responsive-xl {
+  font-size: clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.text-responsive-lg {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+}
+
+.text-responsive-base {
+  font-size: clamp(0.875rem, 2vw, 1.125rem);
+}
+
+.spacing-responsive {
+  padding: clamp(1rem, 3vw, 3rem);
+}
+
+.spacing-responsive-sm {
+  padding: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+@container (min-width: 768px) {
+  .container-md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 1024px) {
+  .container-lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

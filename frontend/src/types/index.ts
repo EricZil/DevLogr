@@ -17,6 +17,9 @@ export interface ProjectData {
   createdAt: string;
   updatedAt: string;
   lastUpdate: string;
+  customDomain?: string | null;
+  domainVerified?: boolean;
+  sslEnabled?: boolean;
   user: {
     id: string;
     name: string;

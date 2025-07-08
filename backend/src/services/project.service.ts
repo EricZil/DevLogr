@@ -2,9 +2,31 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../lib/error-handler";
 import { z } from "zod";
 import { promisify } from "util";
-import { lookup } from "dns";
+import dns from "dns";
 
-const dnsLookup = promisify(lookup);
+const dnsLookupAsync = promisify(dns.lookup);
+const dnsResolveAsync = promisify(dns.resolve);
+
+interface DomainVerificationResult {
+  isVerified: boolean;
+  status: 'verified' | 'pending' | 'failed' | 'invalid';
+  message: string;
+  details: {
+    dnsResolved: boolean;
+    pointsToProxy: boolean;
+    hasCloudflare: boolean;
+    sslAvailable: boolean;
+    lastChecked: Date;
+  };
+}
+
+interface DomainConfigInstructions {
+  type: 'CNAME' | 'A_RECORD';
+  name: string;
+  value: string;
+  ttl: number;
+  description: string;
+}
 
 
 function generateSlug(name: string): string {
@@ -43,27 +65,165 @@ async function verifyProjectOwnership(projectId: string, userId: string) {
   return project;
 }
 
-async function verifyCustomDomain(domain: string): Promise<boolean> {
+async function verifyCustomDomain(domain: string): Promise<DomainVerificationResult> {
   try {
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const result = await dnsLookup(cleanDomain);
-    const proxyResult = await dnsLookup('proxy.devlogr.space');
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
     
-    return result.address === proxyResult.address;
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.([a-zA-Z]{2,}\.?)+$/;
+    if (!domainRegex.test(cleanDomain)) {
+      return {
+        isVerified: false,
+        status: 'invalid',
+        message: 'Invalid domain format',
+        details: {
+          dnsResolved: false,
+          pointsToProxy: false,
+          hasCloudflare: false,
+          sslAvailable: false,
+          lastChecked: new Date()
+        }
+      };
+    }
+
+    const details = {
+      dnsResolved: false,
+      pointsToProxy: false,
+      hasCloudflare: false,
+      sslAvailable: false,
+      lastChecked: new Date()
+    };
+
+    try {
+      const result = await dnsLookupAsync(cleanDomain);
+      details.dnsResolved = true;
+
+      try {
+        const proxyResult = await dnsLookupAsync('proxy.devlogr.space');
+        details.pointsToProxy = result.address === proxyResult.address;
+      } catch {
+        const cloudflareIpRanges = [
+          '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
+          '104.24.', '104.25.', '104.26.', '104.27.', '104.28.', '104.29.', '104.30.', '104.31.',
+          '172.64.', '172.65.', '172.66.', '172.67.', '172.68.', '172.69.', '172.70.', '172.71.'
+        ];
+        details.hasCloudflare = cloudflareIpRanges.some(range => result.address.startsWith(range));
+      }
+
+      try {
+        const cnameRecords = await dnsResolveAsync(cleanDomain, 'CNAME');
+        if (cnameRecords.some(record => record.includes('devlogr.space') || record.includes('proxy.devlogr.space'))) {
+          details.pointsToProxy = true;
+        }
+      } catch {
+      }
+
+      if (details.pointsToProxy || details.hasCloudflare) {
+        details.sslAvailable = true;
+      }
+
+    } catch (dnsError) {
+      console.log('DNS lookup failed for domain:', cleanDomain, dnsError);
+      details.dnsResolved = false;
+    }
+
+    const isVerified = details.pointsToProxy || details.hasCloudflare;
+    let status: 'verified' | 'pending' | 'failed' | 'invalid' = 'failed';
+    let message = '';
+
+    if (isVerified) {
+      status = 'verified';
+      message = 'Domain verified successfully! SSL certificate will be automatically provisioned.';
+    } else if (details.dnsResolved) {
+      status = 'pending';
+      message = 'Domain resolves but is not pointing to our servers. Please update your DNS settings.';
+    } else {
+      status = 'failed';
+      message = 'Domain does not resolve. Please check your DNS configuration.';
+    }
+
+    return {
+      isVerified,
+      status,
+      message,
+      details
+    };
+
   } catch (error) {
     console.error('Domain verification error:', error);
-    return false;
+    return {
+      isVerified: false,
+      status: 'failed',
+      message: 'Failed to verify domain due to technical error',
+      details: {
+        dnsResolved: false,
+        pointsToProxy: false,
+        hasCloudflare: false,
+        sslAvailable: false,
+        lastChecked: new Date()
+      }
+    };
   }
 }
 
+function getDomainConfigInstructions(domain: string): DomainConfigInstructions[] {
+  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+  
+  return [
+    {
+      type: 'CNAME',
+      name: cleanDomain,
+      value: 'proxy.devlogr.space',
+      ttl: 300,
+      description: 'CNAME record pointing your domain to our proxy server'
+    },
+    {
+      type: 'A_RECORD',
+      name: cleanDomain,
+      value: '104.16.0.1',
+      ttl: 300,
+      description: 'Alternative A record if CNAME is not supported'
+    }
+  ];
+}
+
+async function isDomainAvailable(domain: string, excludeProjectId?: string): Promise<boolean> {
+  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+  
+  const existingProject = await prisma.project.findFirst({
+    where: {
+      customDomain: cleanDomain,
+      ...(excludeProjectId && { id: { not: excludeProjectId } })
+    }
+  });
+
+  return !existingProject;
+}
+
 const createProjectSchema = z.object({
-  name: z.string().trim().min(1, "Project name is required"),
-  description: z.string().optional(),
+  name: z.string()
+    .trim()
+    .min(3, "Project name must be at least 3 characters")
+    .max(60, "Project name must be less than 60 characters")
+    .refine(name => !/[<>:"\/\\|?*\x00-\x1f]/.test(name), "Project name contains invalid characters")
+    .refine(name => !['admin', 'api', 'www', 'mail', 'ftp', 'localhost', 'test', 'staging', 'dev', 'dashboard', 'support', 'help', 'docs', 'blog'].includes(name.toLowerCase()), "This name is reserved"),
+  description: z.string()
+    .max(500, "Description must be less than 500 characters")
+    .optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).default("PUBLIC"),
   allowIssues: z.boolean().default(true),
   allowFeedback: z.boolean().default(true),
-  tags: z.array(z.string()).optional(),
-  customDomain: z.string().optional(),
+  tags: z.array(z.string().trim().min(1).max(20))
+    .max(10, "Maximum 10 tags allowed")
+    .optional()
+    .refine(tags => !tags || new Set(tags).size === tags.length, "Duplicate tags are not allowed"),
+  customDomain: z.string()
+    .optional()
+    .refine(domain => {
+      if (!domain) return true;
+      const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.([a-zA-Z]{2,}\.?)+$/;
+      return domainRegex.test(cleanDomain) && cleanDomain.length <= 253;
+    }, "Invalid domain format"),
 });
 
 const updateBasicInfoSchema = z.object({
@@ -529,31 +689,50 @@ export async function verifyProjectDomain(projectId: string, userId: string) {
     if (project.domainVerified) {
       return {
         success: true,
-        data: { verified: true, message: "Domain already verified" }
+        data: { 
+          verified: true, 
+          message: "Domain already verified",
+          status: 'verified' as const,
+          details: {
+            dnsResolved: true,
+            pointsToProxy: true,
+            hasCloudflare: true,
+            sslAvailable: true,
+            lastChecked: new Date()
+          }
+        }
       };
     }
 
-    const isVerified = await verifyCustomDomain(project.customDomain);
+    const verificationResult = await verifyCustomDomain(project.customDomain);
     
-    if (isVerified) {
+    if (verificationResult.isVerified) {
       await prisma.project.update({
         where: { id: projectId },
         data: { 
           domainVerified: true,
-          sslEnabled: true
+          sslEnabled: verificationResult.details.sslAvailable
         }
       });
 
       return {
         success: true,
-        data: { verified: true, message: "Domain verified successfully!" }
+        data: { 
+          verified: true, 
+          message: verificationResult.message,
+          status: verificationResult.status,
+          details: verificationResult.details
+        }
       };
     } else {
       return {
         success: true,
         data: { 
           verified: false, 
-          message: "Domain not pointing to our servers yet. Please ensure your domain points to proxy.devlogr.space" 
+          message: verificationResult.message,
+          status: verificationResult.status,
+          details: verificationResult.details,
+          instructions: getDomainConfigInstructions(project.customDomain)
         }
       };
     }
@@ -574,13 +753,30 @@ export async function getDomainVerificationStatus(projectId: string, userId: str
   try {
     const project = await verifyProjectOwnership(projectId, userId);
     
+    let verificationDetails = null;
+    let instructions = null;
+    
+    if (project.customDomain) {
+      const verificationResult = await verifyCustomDomain(project.customDomain);
+      verificationDetails = verificationResult.details;
+      
+      if (!verificationResult.isVerified) {
+        instructions = getDomainConfigInstructions(project.customDomain);
+      }
+    }
+    
     return {
       success: true,
       data: {
         customDomain: project.customDomain,
         domainVerified: project.domainVerified,
         sslEnabled: project.sslEnabled,
-        hasCustomDomain: !!project.customDomain
+        hasCustomDomain: !!project.customDomain,
+        verificationDetails,
+        instructions,
+        publicUrl: project.customDomain && project.domainVerified 
+          ? `https://${project.customDomain}` 
+          : `https://${project.slug}.devlogr.space`
       }
     };
   } catch (error) {
@@ -593,5 +789,60 @@ export async function getDomainVerificationStatus(projectId: string, userId: str
       500,
       "DOMAIN_STATUS_ERROR"
     );
+  }
+}
+
+export async function checkDomainAvailability(domain: string) {
+  try {
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+    
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.([a-zA-Z]{2,}\.?)+$/;
+    if (!domainRegex.test(cleanDomain)) {
+      return {
+        success: true,
+        data: { 
+          available: false, 
+          reason: 'Invalid domain format',
+          suggestions: []
+        }
+      };
+    }
+
+    const isAvailable = await isDomainAvailable(cleanDomain);
+    
+    if (!isAvailable) {
+      return {
+        success: true,
+        data: { 
+          available: false, 
+          reason: 'Domain is already in use by another project',
+          suggestions: [
+            `blog.${cleanDomain}`,
+            `app.${cleanDomain}`,
+            `www.${cleanDomain}`
+          ]
+        }
+      };
+    }
+
+    const verificationResult = await verifyCustomDomain(cleanDomain);
+    
+    return {
+      success: true,
+      data: {
+        available: true,
+        domain: cleanDomain,
+        currentStatus: verificationResult.status,
+        message: verificationResult.message,
+        requiresSetup: !verificationResult.isVerified,
+        instructions: getDomainConfigInstructions(cleanDomain)
+      }
+    };
+  } catch (error) {
+    console.error('Error checking domain availability:', error);
+    return {
+      success: false,
+      message: 'Failed to check domain availability'
+    };
   }
 } 

@@ -8,6 +8,7 @@ import UpdateManager from '@/components/dashboard/UpdateManager';
 import IssueManager from '@/components/dashboard/IssueManager';
 import FeedbackManager from '@/components/dashboard/FeedbackManager';
 import LoadingScreen from '@/components/shared/ui/LoadingScreen';
+import DomainSetupWizard from '@/components/dashboard/DomainSetupWizard';
 
 interface Tag {
   id: string;
@@ -38,6 +39,9 @@ interface Project {
   };
   allowIssues?: boolean;
   allowFeedback?: boolean;
+  customDomain?: string | null;
+  domainVerified?: boolean;
+  sslEnabled?: boolean;
 }
 
 type TabType = 'overview' | 'settings' | 'milestones' | 'updates' | 'issues' | 'feedback';
@@ -52,8 +56,19 @@ export default function ProjectManagement() {
   const [saving, setSaving] = useState(false);
   const [projectTags, setProjectTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState('');
-  const [popularTags, setPopularTags] = useState<Tag[]>([]);
+  const [timelineData, setTimelineData] = useState<{startDate: string; endDate: string}>({
+    startDate: '',
+    endDate: ''
+  });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+  const [domainVerificationStatus, setDomainVerificationStatus] = useState<{
+    verified: boolean;
+    dns: boolean;
+    ssl: boolean;
+    error?: string;
+  } | null>(null);
+  const [showDomainWizard, setShowDomainWizard] = useState(false);
   const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
@@ -80,6 +95,10 @@ export default function ProjectManagement() {
           const responseData = await response.json();
           if (responseData.success && responseData.data) {
             setProject(responseData.data);
+            setTimelineData({
+              startDate: responseData.data.startDate ? new Date(responseData.data.startDate).toISOString().split('T')[0] : '',
+              endDate: responseData.data.endDate ? new Date(responseData.data.endDate).toISOString().split('T')[0] : ''
+            });
           } else {
             setError(responseData.message || 'Failed to load project');
           }
@@ -194,6 +213,10 @@ export default function ProjectManagement() {
         const responseData = await response.json();
         if (responseData.success && responseData.data) {
           setProject(prev => prev ? { ...prev, ...responseData.data } : null);
+          setTimelineData({
+            startDate: responseData.data.startDate ? new Date(responseData.data.startDate).toISOString().split('T')[0] : '',
+            endDate: responseData.data.endDate ? new Date(responseData.data.endDate).toISOString().split('T')[0] : ''
+          });
           return true;
         }
       }
@@ -228,27 +251,7 @@ export default function ProjectManagement() {
     }
   }, [projectId]);
 
-  const fetchPopularTags = useCallback(async () => {
-    try {
-      const token = api.getAccessToken();
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tags?action=popular`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
 
-      if (response.ok) {
-        const responseData = await response.json();
-        if (responseData.success && responseData.data) {
-          setPopularTags(responseData.data);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch popular tags:', error);
-    }
-  }, []);
 
   const addTag = async (tagName: string) => {
     try {
@@ -302,12 +305,57 @@ export default function ProjectManagement() {
     }
   };
 
+
+  const verifyDomain = async () => {
+    if (!project?.customDomain) return;
+    
+    try {
+      const token = api.getAccessToken();
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=verify-domain`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        if (responseData.success && responseData.data) {
+          setDomainVerificationStatus({
+            verified: responseData.data.verified,
+            dns: responseData.data.dns,
+            ssl: responseData.data.ssl,
+            error: responseData.data.error
+          });
+          if (responseData.data.verified) {
+            setProject(prev => prev ? { ...prev, domainVerified: true, sslEnabled: responseData.data.ssl } : null);
+            setToast({ message: 'Domain verified successfully!', type: 'success' });
+          } else {
+            setToast({ message: 'Domain verification failed. Please check your DNS settings.', type: 'error' });
+          }
+          setTimeout(() => setToast(null), 3000);
+          return responseData.data;
+        }
+      }
+      setToast({ message: 'Failed to verify domain', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+      return null;
+    } catch (error) {
+      console.error('Failed to verify domain:', error);
+      setToast({ message: 'An error occurred during domain verification', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+      return null;
+    }
+  };
+
+
   useEffect(() => {
     if (activeTab === 'settings' && project) {
       fetchProjectTags();
-      fetchPopularTags();
     }
-  }, [activeTab, project, fetchProjectTags, fetchPopularTags]);
+  }, [activeTab, project, fetchProjectTags]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -394,7 +442,9 @@ export default function ProjectManagement() {
             </div>
             <div className="flex items-center space-x-4">
               <a
-                href={`https://${project.slug}.devlogr.space`}
+                href={project.customDomain && project.domainVerified 
+                  ? `https://${project.customDomain}` 
+                  : `https://${project.slug}.devlogr.space`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all duration-300"
@@ -403,6 +453,11 @@ export default function ProjectManagement() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
                 <span className="text-sm font-medium">View Public Page</span>
+                {project.customDomain && project.domainVerified && (
+                  <span className="px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded text-xs font-medium">
+                    Custom Domain
+                  </span>
+                )}
               </a>
             </div>
           </div>
@@ -849,8 +904,8 @@ export default function ProjectManagement() {
                   </label>
                   <input
                     type="date"
-                    value={project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setProject(prev => prev ? { ...prev, startDate: e.target.value } : null)}
+                    value={timelineData.startDate}
+                    onChange={(e) => setTimelineData(prev => ({ ...prev, startDate: e.target.value }))}
                     className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                 </div>
@@ -861,8 +916,8 @@ export default function ProjectManagement() {
                   </label>
                   <input
                     type="date"
-                    value={project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setProject(prev => prev ? { ...prev, endDate: e.target.value } : null)}
+                    value={timelineData.endDate}
+                    onChange={(e) => setTimelineData(prev => ({ ...prev, endDate: e.target.value }))}
                     className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                 </div>
@@ -870,10 +925,19 @@ export default function ProjectManagement() {
               
               <div className="flex justify-end mt-8 pt-6 border-t border-white/10">
                 <button 
-                  onClick={() => updateTimeline({
-                    startDate: project.startDate,
-                    endDate: project.endDate
-                  })}
+                  onClick={async () => {
+                    const success = await updateTimeline({
+                      startDate: timelineData.startDate ? new Date(timelineData.startDate + 'T00:00:00.000Z').toISOString() : null,
+                      endDate: timelineData.endDate ? new Date(timelineData.endDate + 'T23:59:59.999Z').toISOString() : null
+                    });
+                    if (success) {
+                      setToast({ message: 'Timeline updated successfully!', type: 'success' });
+                      setTimeout(() => setToast(null), 3000);
+                    } else {
+                      setToast({ message: 'Failed to update timeline', type: 'error' });
+                      setTimeout(() => setToast(null), 3000);
+                    }
+                  }}
                   disabled={saving}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -951,42 +1015,286 @@ export default function ProjectManagement() {
                     Popular Tags
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {popularTags.length > 0 ? popularTags.map((tag) => (
+                    {['JavaScript', 'Python', 'React', 'Vue.js', 'Angular', 'Next.js', 'Express', 'Django', 'Flask', 'MongoDB', 'PostgreSQL', 'MySQL', 'Docker', 'AWS', 'Vercel'].map((tag, index) => (
                       <button
-                        key={tag.id}
+                        key={index}
                         onClick={() => {
-                          if (!projectTags.find(pt => pt.id === tag.id)) {
-                            addTag(tag.name);
+                          if (!projectTags.find(pt => pt.name.toLowerCase() === tag.toLowerCase())) {
+                            addTag(tag);
                           }
                         }}
-                        disabled={!!projectTags.find(pt => pt.id === tag.id)}
+                        disabled={!!projectTags.find(pt => pt.name.toLowerCase() === tag.toLowerCase())}
                         className={`px-3 py-1 rounded-full text-sm transition-all ${
-                          projectTags.find(pt => pt.id === tag.id)
+                          projectTags.find(pt => pt.name.toLowerCase() === tag.toLowerCase())
                             ? 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
                             : 'bg-zinc-800/50 border border-zinc-600/50 text-zinc-300 hover:bg-blue-500/20 hover:border-blue-500/30 hover:text-blue-400'
                         }`}
                       >
-                        {tag.name} {tag._count && tag._count.projects > 0 && `(${tag._count.projects})`}
+                        {tag}
                       </button>
-                    )) : (
-                      ['JavaScript', 'Python', 'React', 'Vue.js', 'Angular', 'Next.js', 'Express', 'Django', 'Flask', 'MongoDB', 'PostgreSQL', 'MySQL', 'Docker', 'AWS', 'Vercel'].map((tag, index) => (
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 opacity-60">
+              <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
+                <span className="mr-3">🌐</span>
+                Custom Domain
+                <span className="ml-3 px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full text-sm font-medium">
+                  In Development
+                </span>
+              </h3>
+              
+              <div className="space-y-6">
+                <div className="bg-black/30 rounded-xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-white">Current URL</h4>
+                    {project.customDomain && (
+                      <div className="flex items-center space-x-2">
+                        {project.domainVerified ? (
+                          <span className="flex items-center space-x-1 px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-full text-sm font-medium">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Verified</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center space-x-1 px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full text-sm font-medium">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            <span>Pending Verification</span>
+                          </span>
+                        )}
+                        {project.sslEnabled && (
+                          <span className="flex items-center space-x-1 px-3 py-1 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-full text-sm font-medium">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <span>SSL Enabled</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-700/50">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">Default DevLogr URL</label>
+                      <div className="flex items-center space-x-2">
+                        <code className="text-blue-400 bg-blue-500/10 px-3 py-2 rounded border border-blue-500/20 flex-1">
+                          https://{project.slug}.devlogr.space
+                        </code>
                         <button
-                          key={index}
-                          onClick={() => {
-                            if (!projectTags.find(pt => pt.name.toLowerCase() === tag.toLowerCase())) {
-                              addTag(tag);
-                            }
-                          }}
-                          disabled={!!projectTags.find(pt => pt.name.toLowerCase() === tag.toLowerCase())}
-                          className={`px-3 py-1 rounded-full text-sm transition-all ${
-                            projectTags.find(pt => pt.name.toLowerCase() === tag.toLowerCase())
-                              ? 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
-                              : 'bg-zinc-800/50 border border-zinc-600/50 text-zinc-300 hover:bg-blue-500/20 hover:border-blue-500/30 hover:text-blue-400'
-                          }`}
+                          onClick={() => navigator.clipboard.writeText(`https://${project.slug}.devlogr.space`)}
+                          className="p-2 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded border border-zinc-600 transition-all"
+                          title="Copy URL"
                         >
-                          {tag}
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
                         </button>
-                      ))
+                      </div>
+                    </div>
+                    
+                    {project.customDomain && (
+                      <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-500/20">
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Custom Domain</label>
+                        <div className="flex items-center space-x-2">
+                          <code className="text-purple-400 bg-purple-500/10 px-3 py-2 rounded border border-purple-500/20 flex-1">
+                            https://{project.customDomain}
+                          </code>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(`https://${project.customDomain}`)}
+                            className="p-2 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded border border-zinc-600 transition-all"
+                            title="Copy URL"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="block text-sm font-medium text-zinc-300">
+                          Custom Domain Setup
+                        </label>
+                        <button
+                          disabled
+                          className="flex items-center space-x-2 px-4 py-2 bg-gray-500/20 text-gray-400 rounded-lg font-medium cursor-not-allowed"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span>Setup Wizard</span>
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          value={project.customDomain || ''}
+                          disabled
+                          placeholder="example.com"
+                          className="w-full bg-gray-500/20 border border-gray-500/30 rounded-xl px-4 py-3 text-gray-400 placeholder-gray-500 cursor-not-allowed"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Custom domain functionality is currently in development. It will be available in a future release.
+                        </p>
+                        
+                        <div className="flex space-x-3">
+                          <button
+                            disabled
+                            className="flex-1 bg-gray-500/20 text-gray-400 px-4 py-3 rounded-xl font-semibold cursor-not-allowed"
+                          >
+                            Coming Soon
+                          </button>
+                          
+                          <button
+                            disabled
+                            className="px-6 py-3 bg-gray-500/20 border border-gray-500/30 text-gray-400 rounded-xl cursor-not-allowed"
+                          >
+                            Verify
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {project.customDomain && (
+                      <div className="bg-gray-900/20 rounded-xl p-6 border border-gray-500/20">
+                        <h4 className="text-lg font-semibold text-gray-400 mb-4 flex items-center">
+                          <span className="mr-2">⚠️</span>
+                          Domain Management
+                        </h4>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Domain management features are currently being developed and will be available soon.
+                        </p>
+                        <button
+                          disabled
+                          className="bg-gray-500/20 border border-gray-500/30 text-gray-400 px-4 py-2 rounded-lg cursor-not-allowed"
+                        >
+                          Remove Custom Domain
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-blue-900/20 rounded-xl p-6 border border-blue-500/20">
+                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                        <span className="mr-2">📋</span>
+                        DNS Configuration
+                      </h4>
+                      
+                      {project.customDomain ? (
+                        <div className="space-y-4">
+                          <p className="text-sm text-zinc-300">
+                            Add these DNS records to your domain provider:
+                          </p>
+                          
+                          <div className="bg-black/40 rounded-lg p-4 border border-blue-500/20">
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-xs text-zinc-500 mb-1">Type</label>
+                                <code className="text-blue-400">CNAME</code>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-zinc-500 mb-1">Name</label>
+                                <div className="flex items-center space-x-2">
+                                  <code className="text-white flex-1">{project.customDomain.includes('.') ? project.customDomain.split('.')[0] : '@'}</code>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText(project.customDomain?.includes('.') ? project.customDomain.split('.')[0] : '@')}
+                                    className="p-1 text-zinc-400 hover:text-white transition-colors"
+                                    title="Copy"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-zinc-500 mb-1">Value</label>
+                                <div className="flex items-center space-x-2">
+                                  <code className="text-white flex-1">proxy.devlogr.space</code>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText('proxy.devlogr.space')}
+                                    className="p-1 text-zinc-400 hover:text-white transition-colors"
+                                    title="Copy"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-xs text-zinc-500 space-y-1">
+                            <p>💡 DNS changes can take up to 24 hours to propagate globally</p>
+                            <p>🔒 SSL certificates are automatically provisioned after verification</p>
+                            <p>📞 Need help? Check your domain provider&apos;s documentation for adding CNAME records</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-zinc-400">
+                          Set a custom domain above to see DNS configuration instructions.
+                        </p>
+                      )}
+                    </div>
+
+                    {domainVerificationStatus && (
+                      <div className={`rounded-xl p-6 border ${
+                        domainVerificationStatus.verified 
+                          ? 'bg-emerald-900/20 border-emerald-500/20' 
+                          : 'bg-amber-900/20 border-amber-500/20'
+                      }`}>
+                        <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                          <span className="mr-2">{domainVerificationStatus.verified ? '✅' : '⏳'}</span>
+                          Verification Status
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-zinc-400">DNS Resolution:</span>
+                              <span className={`ml-2 ${domainVerificationStatus.dns ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {domainVerificationStatus.dns ? '✓ Working' : '✗ Failed'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-zinc-400">SSL Certificate:</span>
+                              <span className={`ml-2 ${domainVerificationStatus.ssl ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {domainVerificationStatus.ssl ? '✓ Active' : '⏳ Pending'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {domainVerificationStatus.error && (
+                            <div className="bg-red-900/30 rounded-lg p-3 border border-red-500/20">
+                              <p className="text-red-400 text-sm">{domainVerificationStatus.error}</p>
+                            </div>
+                          )}
+                          
+                          {!domainVerificationStatus.verified && (
+                            <div className="bg-amber-900/30 rounded-lg p-3 border border-amber-500/20">
+                              <p className="text-amber-400 text-sm">
+                                Domain verification is still in progress. This can take a few minutes after DNS changes.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1039,6 +1347,22 @@ export default function ProjectManagement() {
             <span className="font-medium">{toast.message}</span>
           </div>
         </div>
+      )}
+
+      {showDomainWizard && (
+        <DomainSetupWizard
+          projectId={projectId}
+          projectSlug={project.slug}
+          currentDomain={project.customDomain}
+          onComplete={(domain) => {
+            setProject(prev => prev ? { ...prev, customDomain: domain } : null);
+            setShowDomainWizard(false);
+            setTimeout(() => {
+              verifyDomain();
+            }, 1000);
+          }}
+          onCancel={() => setShowDomainWizard(false)}
+        />
       )}
     </div>
   );
