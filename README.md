@@ -31,114 +31,77 @@
 
 ## 📓 Devlogs
 
-### Devlog #6 - Release
-![Devlog #6](https://cdn.gcdn.space/SoM/GhostCDN/devlog6.png)
+### Devlog #4 - Mental Breakdown.
+![Devlog #4](https://cdn.gcdn.space/SoM/DevLogr/devlog4.png)
 
-It's happening. We're live. <br>
+Yeahh.. Title says everything. Soo, basically, since last devlog when I said that I'm gonna push it to Vercel, well.. um.. I did. <br>
+Little summary from Vercel: <br>
+Frontend failed: 12 times <br>
+Backend failed: 13 times <br>
+And that's not it, I had to rebuilt the WHOLE backend, every single file from scratch. Cause Vercel kept rejecting my backend, and yeah.. Had to rebuilt it completely. (It was nightmare) Funny part is, that when I began rebuilding backend, frontend worked perfectly, but when I had released backend-v2, frontend said bye bye.. Even tho I had fixed frontend with new endpoints from backend-v2. <br>
+W H A T E V E R! It's fixed now;) And yeah, I had also developed Custom domain support too! Which is working (can't believe it lol). <br>
+Now final touches. Gonna debug everything, fix some UI issues, finish landing page, footer, adjust some CSS. <br>
+Can't believe that I am saying this, but - This actually coming LIVE soon! Believe me, yesterday, when I was re-building everything, I was so, sooooo close coming to conclusion to writing last devlog, and saying this is over. Project is cancelled. But... My bff (Claude) gave me hope! And that hope is here! Hosted at Vercel world. The best view to view is when Vercel Dashboard shows status - Ready. (The best view) <br>
 
-✅ Updated UI for Verify & Password Reset pages  
-✅ Upload flow got a glow-up <br>
-✅ Added a 404 page (because you will find a way to break stuff) <br>
-✅ Fixed the cursed QR code in Image Viewer <br>
-✅ And a bunch of stealth fixes I'm too lazy to list lol <br>
+Alright, enough of night stories, Devlogr - <br>
+Manage your project journey together with Devlogr. <br>
+Manage your projects in one place. Let your community know what's happening with your project! Don't let your project be silent! <br>
+Manage Milestones, Updates, Issues at one place. Even feedback from the public can give you hope! <br>
+This coming live soon! ETA ~ 2-4 hours. <br>
 
-🎉 BETA is officially out! Registrations are OPEN. <br>
-Expect bugs lurking in the shadows, but the CDN? Nahhh, that beast is solid and fully operational. <br>
+(Ik, dashboard need a big UI change, I will, just that UI is not my priority rn)
 
-This was the main goal all along—make a CDN that just works. Mission accomplished (for now). <br>
+### Devlog #3 - DevLogr is not sleeping!
+![Devlog #3](https://cdn.gcdn.space/SoM/DevLogr/devlog3.png)
 
-And yeah, don't panic—this isn't the end. I'm not abandoning anything. Ghost CDN will keep getting updates even after shipping. <br>
+Heyy, ik, ik, it’s been almost 3 days since the last devlog… had some issues behind the scenes, but I’m back on track! <br>
 
-More chaos soon 👻
+✅ Completed the FULL Public Page (yeah, the page where project Milestones, Updates, Issues, and Feedback will live) <br>
+✅ Completed the Project Management Panel <br>
+✅ Updated the Dashboard <br>
+✅ Fixed a lot of errors (my bffs) <br>
 
-### Devlog #5 - Ban Hammer, Speed Boost, and Chaos
-![Devlog #5](https://cdn.gcdn.space/SoM/GhostCDN/devlog5.png)
+Gonna push it to Vercel soon, but yeah—still no DEMO yet… this project basically runs on the backend, and without it—chaos. So I still need to re-check the whole backend, because I know there are things to work on, as well as custom domain support, and some other things, that I reveal in the next devlog! <br>
 
-Performance? ✅ About ~60% faster uploads now. <br>
-Caching? ✅ Redis online. <br>
-Dashboard? ✅ Re-structured, Uploads tab got a shiny new buttons! <br>
+At some point I thought—why did I even start this project? It felt impossible to make everything work, connect smoothly, and actually be usable. And how am I going to manage custom domains!? I honestly considered deleting it. But here we are—it’s working! (still can’t believe it lol) <br>
 
-Also added: <br>
-New CDN behind the scenes. <br>
-Email + password reset flows (finally). <br>
-Fresh backend endpoints for Admin (so fresh I managed to ban my own account without actually banning it—don't ask 💀). <br>
-Account Settings storage updates. <br>
-Misc backend witchcraft. <br>
-A bunch of other tweaks I already forgot about lol. <br>
-Analytics and Storage stats are postponed to a future devlog—too many moving pieces for today. <br>
+Sooooo yeahh, it wouldn’t be me if I wasn’t making projects like these. I always think this way: What kind of tool do I need to make projects efficient & keep everything on track? That’s DevLogr. <br>
 
-Registration is still disabled because I'm way too tired to debug every corner right now. I'll tackle that tomorrow. <br>
+(Sorry, didn't had any good pics to use for this devlog, so I just replaced mock data with real one (not encoded)) <br>
 
-More ghostly updates coming soon 👻
+Last devlog I said “I need sleep.” Now—LET’S MAKE IT WORK. <br>
+(I slept 5 hours today :’)) <br>
 
-### Devlog #4 - +13377
-![Devlog #4](https://cdn.gcdn.space/SoM/GhostCDN/devlog4.png)
+#4 update soon! 💜
 
-@$#%&. What's "+13377"? Just +13377 lines of glorious chaos since the last commit 💀 <br>
-But heyyy, rewrote half the backend again! (send help) <br>
-As always, the backend was NOT in the mood to cooperate, buuuut I finally wrestled it into submission. <br>
+### Devlog #2 - A lot.
+![Devlog #2](https://cdn.gcdn.space/SoM/DevLogr/devlog2.png)
 
-✨ What's new? <br>
-Fully working Dashboard (yes, it actually works, I'm shook) <br>
-Half-working Admin Dashboard (good enough for now lol) <br>
-Updated UIs all around <br>
-Auth improvements (sign in like a pro) <br>
+Added Sign Up / Sign In pages so you can actually get into the platform. <br>
+Authentication is working. <br>
+Created the Dashboard to manage your project. <br>
+Built the Project Management panel (about half the functions are already developed and working). <br>
+Created the Public Page template for showcasing your project online (hosted either on our subdomain or your own custom domain). <br>
+Added Feedback and Issues forms to the public page, so you can collect everything in one place (issue management works pretty much like GitHub Issues). <br>
+Added a bunch of backend endpoints. <br>
 
-🔐 Guest Uploads: <br>
-Upload up to 10MB per file, and I'll babysit your stuff for 2 weeks. <br>
-💀 Want more? <br>
-Sign up to the GhostCDN family—unlimited size uploads and lifetime CDN links. Seriously. It's worth it. <br>
+Currently experiencing high ms on the backend (might have to rewrite the whole thing if it doesn’t chill). <br>
 
-And yeahhh, this ain't the end. Way more coming soon! 👻 <br>
+ETA for the DEMO: around 1–3 days. <br>
 
-Next up: <br>
-Finish backend (again) <br>
-Email services <br>
-Image upscaling <br>
-Faster uploads <br>
-Image optimization <br>
-And everyone's favorite—debugging everything. <br>
+After all project management features are finished, I’ll start working on custom domain support. All SSL and config will be handled automatically—just plug in your domain. <br>
 
-Stay tuned!
+I need sleep. <br>
+More updates soon. 💜
 
-### Devlog #3 - A loooot of changes
-![Devlog #3](https://cdn.gcdn.space/SoM/GhostCDN/devlog3.png)
+### Devlog #1 - The Beginning of DevLogr 🚀
+![Devlog #1](https://cdn.gcdn.space/SoM/DevLogr/devlog1.png)
 
-Yeah, it's been a hot minute since the last devlog. But no, I wasn't slacking off (mostly). <br>
+Well, here we go again—another adventure begins. <br>
 
-Had to partially rewrite the backend because Vercel said "lol nope" to anything over 4.5MB uploads. So now we're rocking presigned URLs instead. <br>
-Changed up a bunch of UI bits. <br>
-Added authentication (yep, even social logins for all you lazy gremlins). <br>
-Built account settings. <br>
-Started working on the Dashboard. <br>
+The first version of the frontend for DevLogr. The idea is simple: give developers a slick place to share devlogs, track progress, and show the world what they’re building (or breaking). <br>
 
-Coming up next: <br>
-Image upscaling (your memes will finally hit 4K) <br>
-Email verification and password resets for the folks avoiding social logins <br>
-
-Heads up: the Dashboard design is still early. No promises it'll look the same in the next devlog. <br>
-
-If the backend doesn't rebel again, you'll see a shiny DEMO in the next devlog. <br>
-
-Real soon… Ghost 👻 will be unleashed. <br>
-
-### Devlog #2 - Drag. Drop. Paste. Upload. Ghosted. 👻
-![Devlog #2](https://cdn.gcdn.space/SoM/GhostCDN/devlog2.png)
-Upload flow is finally alive — drag & drop is working, CTRL+V slaps too. Instantly yeet your images into the abyss. <br>
-
-Backend's still angry with me, but we're getting there. <br>
-More chaos loading…
-
-
-### Devlog #1 - GHOST CDN
-![Devlog #1](https://cdn.gcdn.space/SoM/GhostCDN/devlog1.png)
-
-👻 rise from the dead, a new project has spawned... <br>
-Spun up the first version of the site — minimal, shady, and definitely built past midnight <br>
-Built the base upload flow for the CDN (still designing it tho) <br>
-Backend is coming to life — files gonna fly soon. <br>
-
-The haunt just started.
+Stay tuned. 💜👻
 
 ## ✨ Core Features
 
