@@ -19,6 +19,12 @@ const AddTaskModal = dynamic(
   { ssr: false }
 );
 
+// Import TaskManagementModal with SSR disabled
+const TaskManagementModal = dynamic(
+  () => import('@/components/modals/TaskManagementModal'),
+  { ssr: false }
+);
+
 interface MilestoneStats {
   total: number;
   completed: number;
@@ -47,6 +53,8 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   
   const { success, error } = useNotification();
 
@@ -175,11 +183,20 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         credentials: 'include',
       });
       if (response.ok) {
-        const data: Task[] = await response.json();
-        setTasks(data);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setTasks(result.data);
+        } else {
+          console.error('Invalid milestone tasks response format:', result);
+          setTasks([]);
+        }
+      } else {
+        console.error('Failed to fetch milestone tasks:', response.status, response.statusText);
+        setTasks([]);
       }
     } catch (err) {
       console.error('Failed to fetch tasks:', err);
+      setTasks([]);
     } finally {
       setLoadingTasks(false);
     }
@@ -202,13 +219,12 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
 
       if (response.ok) {
         // Update local state for both task lists
-        const updateTaskStatus = (taskList: Task[]) => 
-          taskList.map(task => 
-            task.id === taskId ? { ...task, status: newStatus } : task
-          );
-        
-        setTasks(updateTaskStatus);
-        setAllTasks(updateTaskStatus);
+        setTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, status: newStatus } : task
+        ));
+        setAllTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, status: newStatus } : task
+        ));
         
         // Show success notification
         success('Task status updated!');
@@ -222,8 +238,19 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   };
 
   const handleTaskClick = (task: Task) => {
-    // Here you would implement a task details modal
-    success(`Task selected: ${task.title}`);
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleTaskUpdated = () => {
+    // Refresh tasks after task update
+    if (selectedMilestone) {
+      fetchMilestoneTasks(selectedMilestone.id);
+    } else {
+      fetchAllTasks();
+    }
+    fetchMilestones();
+    fetchStats();
   };
 
   const handleCreateTask = () => {
@@ -755,6 +782,17 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         onTaskCreated={handleTaskCreated}
         milestones={milestones}
         selectedMilestone={selectedMilestone?.id || null}
+      />
+
+      {/* Task Management Modal */}
+      <TaskManagementModal
+        isOpen={isTaskModalOpen}
+        task={selectedTask}
+        onClose={() => {
+          setSelectedTask(null);
+          setIsTaskModalOpen(false);
+        }}
+        onTaskUpdated={handleTaskUpdated}
       />
 
     </div>

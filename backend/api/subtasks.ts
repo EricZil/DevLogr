@@ -11,6 +11,24 @@ export default async function handler(
   res: VercelResponse
 ) {
   try {
+    // Handle CORS
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Get the origin from the request headers
+    const origin = req.headers.origin;
+    if (origin) {
+      // Set the CORS headers to match the specific origin
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
+    // Handle OPTIONS preflight requests
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      return res.status(204).end();
+    }
+
     const { id } = req.query;
 
     if (typeof id !== "string") {
