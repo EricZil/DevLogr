@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import dynamic from 'next/dynamic';
 import { useNotification } from '@/contexts/NotificationContext';
+
+const AddUpdateModal = dynamic(
+  () => import('@/components/modals/AddUpdateModal'),
+  { ssr: false }
+);
 
 interface Update {
   id: string;
@@ -22,28 +28,13 @@ interface UpdateManagerProps {
   projectId: string;
 }
 
-const UPDATE_TYPES: Array<Update['type']> = [
-  'PROGRESS',
-  'MILESTONE',
-  'FEATURE',
-  'BUGFIX',
-  'ANNOUNCEMENT',
-  'RELEASE',
-];
-
-
 
 export default function UpdateManager({ projectId }: UpdateManagerProps) {
   const [updates, setUpdates] = useState<Update[]>([]);
   const [stats, setStats] = useState<UpdateStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newUpdate, setNewUpdate] = useState({
-    title: '',
-    content: '',
-    type: 'PROGRESS' as Update['type'],
-  });
-
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
   const { success, error } = useNotification();
 
   const fetchUpdates = useCallback(async () => {
@@ -62,8 +53,13 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       );
 
       if (response.ok) {
-        const data = await response.json();
-        setUpdates(Array.isArray(data) ? data : []);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setUpdates(result.data);
+        } else {
+          console.error('Invalid updates response format:', result);
+          setUpdates([]);
+        }
       } else {
         error('Failed to load updates');
         setUpdates([]);
@@ -92,8 +88,13 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       );
 
       if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+        const result = await response.json();
+        if (result.success && result.data) {
+          setStats(result.data);
+        } else {
+          console.error('Invalid stats response format:', result);
+          setStats({ total: 0, counts: {} });
+        }
       } else {
         setStats({ total: 0, counts: {} });
       }
@@ -108,41 +109,10 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
     fetchStats();
   }, [fetchUpdates, fetchStats]);
 
-  const createUpdate = async () => {
-    if (!newUpdate.title.trim() || !newUpdate.content.trim()) {
-      error('Title & content are required');
-      return;
-    }
-
-    try {
-      const token = api.getAccessToken();
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=updates`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: 'include',
-          body: JSON.stringify(newUpdate),
-        }
-      );
-
-      if (response.ok) {
-        success('Update created!');
-        setNewUpdate({ title: '', content: '', type: 'PROGRESS' });
-        setIsCreating(false);
-        fetchUpdates();
-        fetchStats();
-      } else {
-        error('Failed to create update');
-      }
-    } catch (err) {
-      console.error('Create update error:', err);
-      error('An error occurred');
-    }
+  const handleUpdateCreated = () => {
+    fetchUpdates();
+    fetchStats();
+    success('Update created successfully!');
   };
 
   const deleteUpdate = async (id: string) => {
@@ -316,65 +286,22 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
         ))}
       </div>
 
-      {isCreating ? (
-        <div className="bg-black/30 rounded-xl p-6 border border-white/5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-2">Title</label>
-            <input
-              type="text"
-              value={newUpdate.title}
-              onChange={(e) => setNewUpdate({ ...newUpdate, title: e.target.value })}
-              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:border-blue-500 focus:outline-none transition-all duration-300"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-2">Content</label>
-            <textarea
-              rows={4}
-              value={newUpdate.content}
-              onChange={(e) => setNewUpdate({ ...newUpdate, content: e.target.value })}
-              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:border-blue-500 focus:outline-none transition-all duration-300"
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-2">Type</label>
-            <select
-              value={newUpdate.type}
-              onChange={(e) =>
-                setNewUpdate({ ...newUpdate, type: e.target.value as Update['type'] })
-              }
-              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-all duration-300"
-            >
-              {UPDATE_TYPES.map((t) => (
-                <option key={t} value={t} className="text-black">
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={() => setIsCreating(false)}
-              className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-all duration-300"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={createUpdate}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsCreating(true)}
-          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300"
-        >
-          + New Update
-        </button>
-      )}
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center space-x-2"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        <span>New Update</span>
+      </button>
+
+      <AddUpdateModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onUpdateCreated={handleUpdateCreated}
+        projectId={projectId}
+      />
 
       <div className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
         <div className="mb-8 flex items-center justify-between">

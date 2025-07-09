@@ -54,7 +54,6 @@ export default function DashboardHeader({
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">DevLogr</h1>
-                <p className="text-xs text-gray-400">Enterprise Dashboard</p>
               </div>
             </div>
 
@@ -94,7 +93,6 @@ export default function DashboardHeader({
                 <div className="flex items-center space-x-3">
                   <div className="hidden md:block text-right">
                     <p className="text-sm font-medium text-white">{user?.name}</p>
-                    <p className="text-xs text-gray-400">Administrator</p>
                   </div>
                   {user?.avatar && (
                     <Image

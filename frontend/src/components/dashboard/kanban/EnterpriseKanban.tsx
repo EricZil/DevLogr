@@ -82,18 +82,32 @@ function TaskCard({ task, isDragging }: { task: Task; isDragging?: boolean }) {
           <p className="text-zinc-400 text-[10px] line-clamp-1">{task.description}</p>
         )}
 
-        <div className="flex items-center justify-between text-[10px]">
-          <div className="flex items-center space-x-2 text-zinc-500">
-            {task.subtasks && task.subtasks.length > 0 && (
-              <span className="flex items-center">
-                <svg className="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {task.subtasks && task.subtasks.length > 0 && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-center space-x-1 text-zinc-500">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 <span>
-                {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length}
+                  {task.subtasks.filter((st) => st.completed).length}/{task.subtasks.length} subtasks
                 </span>
+              </div>
+              <span className="text-zinc-400">
+                {Math.round((task.subtasks.filter((st) => st.completed).length / task.subtasks.length) * 100)}%
               </span>
-            )}
+            </div>
+            <div className="w-full bg-zinc-700 rounded-full h-1">
+              <div 
+                className="bg-gradient-to-r from-green-400 to-blue-500 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${(task.subtasks.filter((st) => st.completed).length / task.subtasks.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-[10px]">
+          <div className="flex items-center space-x-2 text-zinc-500">
             {task._count.comments > 0 && (
               <span className="flex items-center">
                 <svg className="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

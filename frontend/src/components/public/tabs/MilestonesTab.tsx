@@ -219,15 +219,40 @@ export default function MilestonesTab({ milestones }: MilestonesTabProps) {
                             
                             {totalSubtasks > 0 && (
                               <div className="mt-3">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="text-zinc-500">Subtask Progress</span>
+                                <div className="flex justify-between text-xs mb-2">
+                                  <span className="text-zinc-500 font-medium">Subtasks ({completedSubtasks}/{totalSubtasks})</span>
                                   <span className="text-zinc-400">{Math.round((completedSubtasks / totalSubtasks) * 100)}%</span>
                                 </div>
-                                <div className="w-full bg-zinc-800/50 rounded-full h-1 overflow-hidden">
+                                <div className="w-full bg-zinc-800/50 rounded-full h-1.5 overflow-hidden mb-3">
                                   <div 
                                     className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
                                     style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
                                   />
+                                </div>
+                                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                  {task.subtasks?.slice(0, 5).map((subtask, index) => (
+                                    <div key={subtask.id} className="flex items-center space-x-2 text-xs">
+                                      <div className={`w-3 h-3 rounded border-2 flex items-center justify-center ${
+                                        subtask.completed
+                                          ? 'bg-green-500 border-green-500'
+                                          : 'border-zinc-600'
+                                      }`}>
+                                        {subtask.completed && (
+                                          <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                      <span className={`flex-1 ${subtask.completed ? 'text-zinc-500 line-through' : 'text-zinc-400'}`}>
+                                        {index + 1}. {subtask.title}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {task.subtasks && task.subtasks.length > 5 && (
+                                    <div className="text-xs text-zinc-500 mt-2 text-center">
+                                      +{task.subtasks.length - 5} more subtasks
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}

@@ -83,6 +83,10 @@ const taskSchema = z.object({
   status: z.enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"]).default("TODO"),
   estimatedHours: z.number().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
+  subtasks: z.array(z.object({
+    title: z.string().trim().min(1, "Subtask title is required"),
+    completed: z.boolean().default(false)
+  })).optional().default([]),
 });
 
 const updateTaskSchema = taskSchema.partial().extend({
@@ -143,17 +147,42 @@ export async function createTask(
     _max: { order: true },
   });
 
+  const { subtasks, ...taskDataWithoutSubtasks } = validatedData;
+
   const task = await prisma.task.create({
     data: {
       milestoneId,
-      ...validatedData,
+      ...taskDataWithoutSubtasks,
       status: validatedData.status,
       dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
       order: (maxOrder._max.order || 0) + 1,
     },
+    include: {
+      subtasks: { orderBy: { order: "asc" } },
+      _count: { select: { comments: true, timeEntries: true } },
+    },
   });
+
+  if (subtasks && subtasks.length > 0) {
+    await prisma.subtask.createMany({
+      data: subtasks.map((subtask, index) => ({
+        taskId: task.id,
+        title: subtask.title,
+        completed: subtask.completed,
+        order: index + 1,
+      })),
+    });
+  }
+
   await updateMilestoneProgress(milestoneId);
-  return task;
+  
+  return prisma.task.findUnique({
+    where: { id: task.id },
+    include: {
+      subtasks: { orderBy: { order: "asc" } },
+      _count: { select: { comments: true, timeEntries: true } },
+    },
+  });
 }
 
 export async function getTask(taskId: string, userId: string) {

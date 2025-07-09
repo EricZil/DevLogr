@@ -17,6 +17,11 @@ const AddTaskModal = dynamic(
   { ssr: false }
 );
 
+const TaskManagementModal = dynamic(
+  () => import('@/components/modals/TaskManagementModal'),
+  { ssr: false }
+);
+
 interface MilestoneStats {
   total: number;
   completed: number;
@@ -45,6 +50,8 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   
   const { success, error } = useNotification();
 
@@ -171,11 +178,18 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         credentials: 'include',
       });
       if (response.ok) {
-        const data: Task[] = await response.json();
-        setTasks(data);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setTasks(result.data);
+        } else {
+          setTasks([]);
+        }
+      } else {
+        setTasks([]);
       }
     } catch (err) {
       console.error('Failed to fetch tasks:', err);
+      setTasks([]);
     } finally {
       setLoadingTasks(false);
     }
@@ -196,13 +210,12 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
       });
 
       if (response.ok) {
-        const updateTaskStatus = (taskList: Task[]) => 
-          taskList.map(task => 
-            task.id === taskId ? { ...task, status: newStatus } : task
-          );
-        
-        setTasks(updateTaskStatus);
-        setAllTasks(updateTaskStatus);
+        setTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, status: newStatus } : task
+        ));
+        setAllTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, status: newStatus } : task
+        ));
         
         success('Task status updated!');
       } else {
@@ -215,7 +228,18 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   };
 
   const handleTaskClick = (task: Task) => {
-    success(`Task selected: ${task.title}`);
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleTaskUpdated = () => {
+    if (selectedMilestone) {
+      fetchMilestoneTasks(selectedMilestone.id);
+    } else {
+      fetchAllTasks();
+    }
+    fetchMilestones();
+    fetchStats();
   };
 
   const handleCreateTask = () => {
@@ -733,6 +757,16 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         onTaskCreated={handleTaskCreated}
         milestones={milestones}
         selectedMilestone={selectedMilestone?.id || null}
+      />
+
+      <TaskManagementModal
+        isOpen={isTaskModalOpen}
+        task={selectedTask}
+        onClose={() => {
+          setSelectedTask(null);
+          setIsTaskModalOpen(false);
+        }}
+        onTaskUpdated={handleTaskUpdated}
       />
 
     </div>
