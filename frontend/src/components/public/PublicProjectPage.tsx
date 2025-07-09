@@ -410,7 +410,7 @@ export default function PublicProjectPage() {
             onClose={() => setIsIssueModalOpen(false)} 
             projectTitle={project.title} 
             projectSlug={project.slug}
-            onIssueCreated={(issue) => {
+            onIssueCreated={() => {
               setIsIssueModalOpen(false);
               if (activeTab !== 'issues') {
                 setActiveTab('issues');
