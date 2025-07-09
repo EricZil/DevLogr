@@ -564,7 +564,7 @@ export async function getPublicProjectBySlug(slug: string) {
   // Parse images JSON for updates
   const processedProject = {
     ...project,
-    updates: project.updates.map(update => ({
+    updates: project.updates.map((update: { images: string | null, [key: string]: any }) => ({
       ...update,
       images: update.images ? 
         (() => {
@@ -673,7 +673,7 @@ export async function getPublicProjectByDomain(domain: string) {
   // Parse images JSON for updates
   const processedProject = {
     ...project,
-    updates: project.updates.map(update => ({
+    updates: project.updates.map((update: { images: string | null, [key: string]: any }) => ({
       ...update,
       images: update.images ? 
         (() => {

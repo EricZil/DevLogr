@@ -1,4 +1,5 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client/edge';
 
 // Custom error class for application-specific errors
 export class AppError extends Error {
