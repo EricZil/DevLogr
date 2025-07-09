@@ -34,7 +34,6 @@ export async function createPublicFeedback(slug: string, feedbackData: any) {
     );
   }
 
-  // Convert empty string to null for database storage
   const submitterEmail = validatedData.submitterEmail === "" ? null : validatedData.submitterEmail;
 
   const feedback = await prisma.feedback.create({

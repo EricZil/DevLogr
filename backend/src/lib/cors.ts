@@ -16,31 +16,27 @@ const corsMiddleware = cors({
     
     // Check if the origin is in our allowed list
     if (allowedOrigins.some(allowedOrigin => allowedOrigin && origin.startsWith(allowedOrigin))) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
     // Allow all subdomains of devlogr.space
     if (origin.endsWith('.devlogr.space')) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
-    // Allow localhost and its subdomains
     if (origin.includes('localhost')) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
-    // Also allow any *.vercel.app domain for deployment previews
     if (origin.endsWith('.vercel.app')) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
-    console.log('CORS: Blocked origin:', origin);
-    // Block the request
     callback(new Error('Not allowed by CORS'));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Allowed methods
-  credentials: true, // Allow cookies to be sent
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'], // Allowed headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
 });
 
 /**
@@ -70,5 +66,28 @@ export async function applyCors(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
+    // Make sure we add the Access-Control-Allow-Credentials header
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Ensure Access-Control-Allow-Origin is not '*' when credentials are included
+    const origin = req.headers.origin;
+    if (origin) {
+      if (allowedOrigins.includes(origin) || 
+          origin.endsWith('.devlogr.space') || 
+          origin.includes('localhost') ||
+          origin.endsWith('.vercel.app')) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+    }
+    
+    // Handle preflight OPTIONS requests properly
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      res.status(204).end();
+      return;
+    }
+    
     await runMiddleware(req, res, corsMiddleware);
 } 

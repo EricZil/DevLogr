@@ -161,6 +161,7 @@ export async function createTask(
     data: {
       milestoneId,
       ...validatedData,
+      status: taskData.status || 'TODO', // Ensure status is respected
       dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
       order: (maxOrder._max.order || 0) + 1,
     },
