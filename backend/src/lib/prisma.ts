@@ -5,23 +5,30 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Format MySQL URL for Edge compatibility
-const formatDatabaseUrl = (): string => {
-  const url = process.env.DATABASE_URL;
+// Process the DATABASE_URL to ensure it has the correct protocol
+const processDbUrl = (url: string | undefined): string => {
+  if (!url) return '';
   
-  if (!url) {
-    console.error('DATABASE_URL environment variable is not set');
-    return '';
-  }
-  
-  // For edge compatibility, MySQL URLs need to be formatted as:
-  // mysql://USER:PASSWORD@HOST:PORT/DATABASE
-  if (url.startsWith('mysql://')) {
-    // The URL is already in the correct format, just return it
+  // If the URL already starts with prisma:// or prisma+postgres://, return it as is
+  if (url.startsWith('prisma://') || url.startsWith('prisma+postgres://')) {
     return url;
   }
   
-  console.error('DATABASE_URL must start with mysql:// for this configuration');
+  // If it starts with postgres://, replace with prisma+postgres://
+  if (url.startsWith('postgres://')) {
+    return url.replace('postgres://', 'prisma+postgres://');
+  }
+  
+  // If it starts with mysql://, replace with prisma://
+  if (url.startsWith('mysql://')) {
+    return url.replace('mysql://', 'prisma://');
+  }
+  
+  // Default case: prepend prisma:// if no protocol is detected
+  if (!url.includes('://')) {
+    return `prisma://${url}`;
+  }
+  
   return url;
 };
 
@@ -29,7 +36,7 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   datasources: {
     db: {
-      url: formatDatabaseUrl(),
+      url: processDbUrl(process.env.DATABASE_URL),
     },
   },
 });
