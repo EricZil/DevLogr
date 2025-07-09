@@ -12,19 +12,19 @@ const corsMiddleware = cors({
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.some(allowedOrigin => allowedOrigin && origin.startsWith(allowedOrigin))) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
     if (origin.endsWith('.devlogr.space')) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
     if (origin.includes('localhost')) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
     if (origin.endsWith('.vercel.app')) {
-      return callback(null, true);
+      return callback(null, origin);
     }
     
     callback(new Error('Not allowed by CORS'));
@@ -53,5 +53,25 @@ export async function applyCors(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    const origin = req.headers.origin;
+    if (origin) {
+      if (allowedOrigins.includes(origin) || 
+          origin.endsWith('.devlogr.space') || 
+          origin.includes('localhost') ||
+          origin.endsWith('.vercel.app')) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+    }
+    
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      res.status(204).end();
+      return;
+    }
+    
     await runMiddleware(req, res, corsMiddleware);
 } 

@@ -147,6 +147,7 @@ export async function createTask(
     data: {
       milestoneId,
       ...validatedData,
+      status: taskData.status || 'TODO',
       dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
       order: (maxOrder._max.order || 0) + 1,
     },
@@ -294,7 +295,7 @@ export async function getTaskStats(taskId: string, userId: string) {
     return {
         subtasks: {
             total: fullTask.subtasks.length,
-             completed: fullTask.subtasks.filter((st: any) => st.completed).length,
+            completed: fullTask.subtasks.filter((st: any) => st.completed).length,
         },
         timeTracking: {
             estimatedHours: fullTask.estimatedHours || 0,
