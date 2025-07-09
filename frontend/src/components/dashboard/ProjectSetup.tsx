@@ -727,17 +727,8 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
               </button>
 
               <button
-                onClick={() => {
-                  setProjectData(prev => ({ ...prev, domainType: 'custom' }));
-                  if (projectData.customDomain) {
-                    debouncedCheckDomain(projectData.customDomain);
-                  }
-                }}
-                className={`w-full p-6 rounded-xl border transition-all duration-300 text-left ${
-                  projectData.domainType === 'custom'
-                    ? 'bg-purple-500/20 border-purple-500/50'
-                    : 'bg-white/5 border-white/10 hover:border-white/20'
-                }`}
+                disabled={true}
+                className="w-full p-6 rounded-xl border transition-all duration-300 text-left bg-gray-500/10 border-gray-500/30 cursor-not-allowed opacity-60"
               >
                 <div className="flex items-start space-x-4">
                   <div className={`p-3 rounded-xl ${
@@ -748,9 +739,14 @@ export default function ProjectSetup({ isOpen, onClose, onComplete }: ProjectSet
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-white mb-2">Custom Domain</h4>
-                    <p className="text-zinc-300 mb-3">
-                      Use your own domain for professional branding
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h4 className="text-lg font-semibold text-white">Custom Domain</h4>
+                      <span className="bg-amber-500/20 text-amber-400 text-xs font-medium px-2 py-1 rounded-full border border-amber-500/30">
+                        In Development
+                      </span>
+                    </div>
+                    <p className="text-zinc-400 mb-3">
+                      Use your own domain for professional branding (Coming soon)
                     </p>
                     
                     <div className="flex items-center space-x-4 text-sm">

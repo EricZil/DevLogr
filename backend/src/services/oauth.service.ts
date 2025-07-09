@@ -92,6 +92,15 @@ export async function handleGitHubCallback(code: string, ipAddress?: string, use
     let user = await prisma.user.findUnique({ where: { email: primaryEmail } });
 
     if (user) {
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                avatar: githubUser.avatar_url,
+                username: user.username || githubUser.login,
+                name: user.name || githubUser.name || githubUser.login,
+            }
+        });
+
         await prisma.userProvider.upsert({
             where: { provider_providerId: { provider: 'GITHUB', providerId: githubUser.id.toString() } },
             update: { accessToken: tokens.access_token, refreshToken: tokens.refresh_token },

@@ -49,6 +49,24 @@ interface PublicProject {
     dueDate: string | null;
     completedAt: string | null;
     progress: number;
+    tasks: Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
+      priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+      dueDate: string | null;
+      completedAt: string | null;
+      estimatedHours: number | null;
+      subtasks: Array<{
+        id: string;
+        title: string;
+        completed: boolean;
+      }>;
+      _count: {
+        comments: number;
+      };
+    }>;
   }>;
   feedback: Array<{
     id: string;
@@ -96,7 +114,35 @@ export default function PublicProjectPage() {
           throw new Error(response.message || response.error || 'Project not found');
         }
 
-        setProject(response.data);
+        const milestoneWithTasks = response.data.milestones as Array<typeof response.data.milestones[0] & { 
+          tasks?: Array<{
+            id: string;
+            title: string;
+            description: string | null;
+            status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
+            priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+            dueDate: string | null;
+            completedAt: string | null;
+            estimatedHours: number | null;
+            subtasks: Array<{
+              id: string;
+              title: string;
+              completed: boolean;
+            }>;
+            _count: {
+              comments: number;
+            };
+          }>
+        }>;
+        
+        const projectData = {
+          ...response.data,
+          milestones: milestoneWithTasks.map(milestone => ({
+            ...milestone,
+            tasks: milestone.tasks || []
+          }))
+        };
+        setProject(projectData);
         if (response.data.allowIssues) {
           fetchIssues(response.data.slug);
         }
@@ -358,7 +404,7 @@ export default function PublicProjectPage() {
               id: project.user.name,
               name: project.user.name,
               username: project.user.username || '',
-              avatar: project.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${project.user.name}`
+              avatar: project.user.avatar || `https://www.gravatar.com/avatar/000000?d=mp&s=80`
             },
             tags: project.tags.map(tagWrapper => ({
               tag: {
@@ -375,7 +421,19 @@ export default function PublicProjectPage() {
             milestones: project.milestones.map(milestone => ({
               ...milestone,
               createdAt: milestone.dueDate || project.startDate,
-              tasks: []
+              tasks: milestone.tasks.map(task => ({
+                ...task,
+                actualHours: 0,
+                createdAt: task.dueDate || project.startDate,
+                subtasks: (task.subtasks || []).map((subtask, index) => ({
+                  ...subtask,
+                  order: index
+                })),
+                _count: {
+                  comments: task._count.comments,
+                  timeEntries: 0
+                }
+              }))
             })),
             issues: [],
             feedback: project.feedback.map(f => ({
@@ -404,7 +462,19 @@ export default function PublicProjectPage() {
           <MilestonesTab milestones={project.milestones.map(milestone => ({
             ...milestone,
             createdAt: milestone.dueDate || project.startDate,
-            tasks: []
+            tasks: milestone.tasks.map(task => ({
+              ...task,
+              actualHours: 0,
+              createdAt: task.dueDate || project.startDate,
+              subtasks: (task.subtasks || []).map((subtask, index) => ({
+                ...subtask,
+                order: index
+              })),
+              _count: {
+                comments: task._count.comments,
+                timeEntries: 0
+              }
+            }))
           }))} />
         )}
 

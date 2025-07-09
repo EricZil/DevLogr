@@ -43,7 +43,7 @@ export default function OverviewTab({ projectData }: OverviewTabProps) {
             <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-400">
               <div className="flex items-center space-x-2">
                 <Image
-                  src={projectData.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${projectData.user.username}`}
+                  src={projectData.user.avatar || `https://www.gravatar.com/avatar/000000?d=mp&s=80`}
                   alt={projectData.user.name}
                   width={24}
                   height={24}

@@ -349,6 +349,26 @@ class ApiService {
     return this.makeRequest(`/updates?action=recent&limit=${limit}`);
   }
 
+  async updateProfile(profileData: {
+    name: string;
+    username: string;
+    email: string;
+    bio: string;
+    location: string;
+    website: string;
+  }): Promise<ApiResponse<User>> {
+    return this.makeRequest<User>('/users?action=update-profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  async deleteAccount(): Promise<ApiResponse> {
+    return this.makeRequest('/users?action=delete-account', {
+      method: 'DELETE',
+    });
+  }
+
   saveTokens(tokens: AuthTokens): void {
     localStorage.setItem('accessToken', tokens.accessToken);
     localStorage.setItem('refreshToken', tokens.refreshToken);
