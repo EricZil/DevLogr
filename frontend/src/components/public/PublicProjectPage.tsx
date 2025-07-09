@@ -214,6 +214,35 @@ export default function PublicProjectPage() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {project.allowIssues && (
+                <button
+                  onClick={() => {
+                    setActiveTab('issues');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 px-3 py-2 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg transition-all duration-300"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <span className="text-sm font-medium">Report Issue</span>
+                </button>
+              )}
+              
+              {project.allowFeedback && (
+                <button
+                  onClick={() => {
+                    setActiveTab('feedback');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-2 px-3 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all duration-300"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+                  </svg>
+                  <span className="text-sm font-medium">Give Feedback</span>
+                </button>
+              )}
               <div className="relative w-16 h-16">
                 <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
                   <circle
@@ -250,18 +279,6 @@ export default function PublicProjectPage() {
             </div>
           )}
 
-          {project.tags.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-2">
-              {project.tags.map((tagWrapper, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full border border-blue-500/30"
-                >
-                  {tagWrapper.tag.name}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </header>
 

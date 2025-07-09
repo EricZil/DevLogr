@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Navigation() {
   return (
     <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 dock-float">
@@ -16,20 +18,13 @@ export default function Navigation() {
             >
               Features
             </a>
-            <a 
-              href="#how-it-works" 
-              className="text-zinc-300 hover:text-white transition-all duration-300 hover:scale-105 px-3 py-2 rounded-full hover:bg-zinc-800/50"
-            >
-              How it Works
-            </a>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="text-zinc-300 hover:text-white transition-all duration-300 hover:scale-105 px-4 py-2 rounded-full hover:bg-zinc-800/50">
-              Sign In
-            </button>
+          <Link href="/auth">
             <button className="bg-gradient-to-r from-white to-zinc-200 text-black px-6 py-2 rounded-full font-medium hover:from-zinc-100 hover:to-zinc-300 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-white/20">
               Get Started
             </button>
+              </Link>
           </div>
           <div className="md:hidden">
             <button className="text-zinc-300 hover:text-white transition-all duration-300 p-2 rounded-full hover:bg-zinc-800/50">
