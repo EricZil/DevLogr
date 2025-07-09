@@ -10,6 +10,7 @@ import IssuesTab from '@/components/public/tabs/IssuesTab';
 import FeedbackTab from '@/components/public/tabs/FeedbackTab';
 import IssueModal from '@/components/public/modals/IssueModal';
 import FeedbackModal from '@/components/public/modals/FeedbackModal';
+import { Issue } from '@/types';
 
 interface PublicProject {
   id: string;
@@ -68,6 +69,8 @@ export default function PublicProjectPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issuesLoading, setIssuesLoading] = useState(false);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -76,34 +79,27 @@ export default function PublicProjectPage() {
         const domainInfo = domainUtils.getDomainInfo();
         const identifier = domainUtils.getProjectIdentifier();
 
-        console.log('Domain detection:', {
-          hostname: window.location.hostname,
-          domainInfo,
-          identifier
-        });
-
         if (!identifier) {
           throw new Error('No project identifier found');
         }
 
         let response;
         if (domainInfo.type === 'subdomain') {
-          console.log('Fetching project by slug:', identifier);
           response = await api.getPublicProject(identifier, 'slug');
         } else if (domainInfo.type === 'custom') {
-          console.log('Fetching project by domain:', identifier);
           response = await api.getPublicProject(identifier, 'domain');
         } else {
           throw new Error('Invalid domain type');
         }
-
-        console.log('API response:', response);
 
         if (!response.success || !response.data) {
           throw new Error(response.message || response.error || 'Project not found');
         }
 
         setProject(response.data);
+        if (response.data.allowIssues) {
+          fetchIssues(response.data.slug);
+        }
       } catch (err) {
         console.error('Error loading project:', err);
         setError(err instanceof Error ? err.message : 'Failed to load project');
@@ -114,6 +110,42 @@ export default function PublicProjectPage() {
 
     loadProject();
   }, []);
+  
+  const fetchIssues = async (slug: string) => {
+    try {
+      setIssuesLoading(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=issues&slug=${encodeURIComponent(slug)}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          setIssues(data.data);
+          console.log("Issues loaded successfully:", data.data.length);
+        } else {
+          console.error('Failed to parse issues:', data);
+          setIssues([]);
+        }
+      } else {
+        console.error('Failed to fetch issues:', response.status);
+        setIssues([]);
+      }
+    } catch (err) {
+      console.error('Error fetching issues:', err);
+      setIssues([]);
+    } finally {
+      setIssuesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (project?.slug && project?.allowIssues && !issuesLoading) {
+      fetchIssues(project.slug);
+    }
+  }, [project?.slug, project?.allowIssues, issuesLoading]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -125,7 +157,6 @@ export default function PublicProjectPage() {
     }
   };
 
-  // Build tabs array based on project settings
   const tabs = [
     { id: 'overview', name: 'Overview', icon: '📊' },
     { id: 'updates', name: 'Updates', icon: '📝' },
@@ -385,7 +416,10 @@ export default function PublicProjectPage() {
         )}
 
         {activeTab === 'issues' && project.allowIssues && (
-          <IssuesTab issues={[]} projectSlug={project.slug} />
+          <IssuesTab 
+            issues={issues} 
+            projectSlug={project.slug} 
+          />
         )}
 
         {activeTab === 'feedback' && project.allowFeedback && (
@@ -421,7 +455,8 @@ export default function PublicProjectPage() {
             projectTitle={project.title} 
             projectSlug={project.slug}
             onIssueCreated={() => {
-              // Optionally handle newly created issue
+              // Refresh the issues list when a new issue is created
+              fetchIssues(project.slug);
               setIsIssueModalOpen(false);
               if (activeTab !== 'issues') {
                 setActiveTab('issues');
