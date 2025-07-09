@@ -94,9 +94,12 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+      } else {
+        setStats({ total: 0, counts: {} });
       }
     } catch (err) {
       console.error('Fetch stats error:', err);
+      setStats({ total: 0, counts: {} });
     }
   }, [projectId]);
 
@@ -258,62 +261,60 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
 
   return (
     <div className="space-y-8">
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
-          {(
-            [
-              { label: 'Total Updates', count: stats.total, color: 'blue', icon: (
-                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              )},
-              { label: 'Progress', count: stats.counts['PROGRESS'] || 0, color: 'purple', icon: (
-                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              )},
-              { label: 'Milestone', count: stats.counts['MILESTONE'] || 0, color: 'yellow', icon: (
-                <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-              )},
-              { label: 'Feature', count: stats.counts['FEATURE'] || 0, color: 'emerald', icon: (
-                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )},
-              { label: 'Bugfix', count: stats.counts['BUGFIX'] || 0, color: 'red', icon: (
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7h-1a4 4 0 00-7.8-1.5M5 11v-1a4 4 0 017.8-1.5M5 13v1a4 4 0 007.8 1.5M19 17v-1a4 4 0 00-7.8-1.5" />
-                </svg>
-              )},
-              { label: 'Announcement', count: stats.counts['ANNOUNCEMENT'] || 0, color: 'indigo', icon: (
-                <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 5H8a2 2 0 00-2 2v4a2 2 0 002 2h8l5 5V0l-5 5z" />
-                </svg>
-              )},
-              { label: 'Release', count: stats.counts['RELEASE'] || 0, color: 'cyan', icon: (
-                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v3M7 4H5a1 1 0 00-1 1v16a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1h-2M7 4h10" />
-                </svg>
-              )},
-            ]
-          ).map((tile) => (
-            <div
-              key={tile.label}
-              className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-zinc-400 text-sm font-medium mb-1">{tile.label}</p>
-                  <p className="text-3xl font-bold text-white">{tile.count}</p>
-                </div>
-                <div className={`p-3 rounded-xl bg-${tile.color}-500/20`}>{tile.icon}</div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
+        {(
+          [
+            { label: 'Total Updates', count: stats?.total || 0, color: 'blue', icon: (
+              <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            )},
+            { label: 'Progress', count: stats?.counts?.['PROGRESS'] || 0, color: 'purple', icon: (
+              <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            )},
+            { label: 'Milestone', count: stats?.counts?.['MILESTONE'] || 0, color: 'yellow', icon: (
+              <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            )},
+            { label: 'Feature', count: stats?.counts?.['FEATURE'] || 0, color: 'emerald', icon: (
+              <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )},
+            { label: 'Bugfix', count: stats?.counts?.['BUGFIX'] || 0, color: 'red', icon: (
+              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7h-1a4 4 0 00-7.8-1.5M5 11v-1a4 4 0 017.8-1.5M5 13v1a4 4 0 007.8 1.5M19 17v-1a4 4 0 00-7.8-1.5" />
+              </svg>
+            )},
+            { label: 'Announcement', count: stats?.counts?.['ANNOUNCEMENT'] || 0, color: 'indigo', icon: (
+              <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 5H8a2 2 0 00-2 2v4a2 2 0 002 2h8l5 5V0l-5 5z" />
+              </svg>
+            )},
+            { label: 'Release', count: stats?.counts?.['RELEASE'] || 0, color: 'cyan', icon: (
+              <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v3M7 4H5a1 1 0 00-1 1v16a1 1 0 001 1h14a1 1 0 001-1V5a1 1 0 00-1-1h-2M7 4h10" />
+              </svg>
+            )},
+          ]
+        ).map((tile) => (
+          <div
+            key={tile.label}
+            className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-zinc-400 text-sm font-medium mb-1">{tile.label}</p>
+                <p className="text-3xl font-bold text-white">{tile.count}</p>
               </div>
+              <div className={`p-3 rounded-xl bg-${tile.color}-500/20`}>{tile.icon}</div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       {isCreating ? (
         <div className="bg-black/30 rounded-xl p-6 border border-white/5 space-y-4">

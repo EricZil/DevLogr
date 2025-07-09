@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -17,30 +18,27 @@ export default function FeedbackModal({ isOpen, onClose, projectTitle, projectSl
     submitterName: '',
     submitterEmail: ''
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { success, error } = useNotification();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      setIsSubmitting(true);
       const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/public?action=create-feedback&slug=${encodeURIComponent(projectSlug)}`;
 
-      const res = await fetch(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
-        body: JSON.stringify({
-          message: formData.message.trim(),
-          rating: formData.rating,
-          category: formData.category,
-          submitterName: formData.submitterName.trim(),
-          submitterEmail: formData.submitterEmail.trim() || '',
-        })
+        body: JSON.stringify(formData)
       });
 
-      if (res.ok) {
-        onClose();
+      if (response.ok) {
+        success('Feedback submitted successfully!');
         setFormData({
           message: '',
           rating: 5,
@@ -48,11 +46,16 @@ export default function FeedbackModal({ isOpen, onClose, projectTitle, projectSl
           submitterName: '',
           submitterEmail: ''
         });
+        onClose();
       } else {
-        console.error('Failed to submit feedback');
+        const errorData = await response.json();
+        error(errorData.error || 'Failed to submit feedback');
       }
     } catch (err) {
       console.error('Error submitting feedback:', err);
+      error('An error occurred while submitting feedback');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -170,12 +173,20 @@ export default function FeedbackModal({ isOpen, onClose, projectTitle, projectSl
             </button>
             <button
               type="submit"
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-300"
+              disabled={isSubmitting}
+              className="flex items-center space-x-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
-              </svg>
-              <span>Submit Feedback</span>
+              {isSubmitting ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+                </svg>
+              )}
+              <span>{isSubmitting ? 'Submitting...' : 'Submit Feedback'}</span>
             </button>
           </div>
         </form>
