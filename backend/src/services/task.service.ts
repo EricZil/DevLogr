@@ -80,12 +80,12 @@ const taskSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
   description: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
+  status: z.enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"]).default("TODO"),
   estimatedHours: z.number().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
 });
 
 const updateTaskSchema = taskSchema.partial().extend({
-    status: z.enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"]).optional(),
     actualHours: z.number().optional(),
     startDate: z.string().datetime().optional().nullable(),
 });
@@ -147,7 +147,7 @@ export async function createTask(
     data: {
       milestoneId,
       ...validatedData,
-      status: taskData.status || 'TODO',
+      status: validatedData.status,
       dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
       order: (maxOrder._max.order || 0) + 1,
     },

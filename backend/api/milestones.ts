@@ -18,6 +18,20 @@ export default async function handler(
   res: VercelResponse
 ) {
   try {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hrs
+      return res.status(204).end();
+    }
+
     const { id, action } = req.query;
 
     if (typeof id !== "string") {

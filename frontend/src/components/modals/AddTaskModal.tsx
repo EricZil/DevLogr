@@ -97,6 +97,8 @@ export default function AddTaskModal({
         dueDate: newTask.dueDate || null
       };
 
+      console.log('Creating task with status:', taskData.status);
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones?id=${newTask.milestoneId}&action=tasks`, {
         method: 'POST',
         headers: {
