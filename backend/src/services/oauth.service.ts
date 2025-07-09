@@ -108,6 +108,16 @@ export async function handleGitHubCallback(code: string, ipAddress?: string, use
     let user = await prisma.user.findUnique({ where: { email: primaryEmail } });
 
     if (user) {
+        // Update avatar and other info from GitHub if not already set
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                avatar: githubUser.avatar_url, // Always update with latest GitHub avatar
+                username: user.username || githubUser.login,
+                name: user.name || githubUser.name || githubUser.login,
+            }
+        });
+
         await prisma.userProvider.upsert({
             where: { provider_providerId: { provider: 'GITHUB', providerId: githubUser.id.toString() } },
             update: { accessToken: tokens.access_token, refreshToken: tokens.refresh_token },
