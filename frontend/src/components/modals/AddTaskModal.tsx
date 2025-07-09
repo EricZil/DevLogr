@@ -89,14 +89,17 @@ export default function AddTaskModal({
     try {
       const token = api.getAccessToken();
       
+      // Ensure status is explicitly included
       const taskData = {
         title: newTask.title.trim(),
         description: newTask.description?.trim() || null,
         priority: newTask.priority,
-        status: newTask.status,
+        status: newTask.status,  // Explicitly include status
         estimatedHours: newTask.estimatedHours ? parseFloat(newTask.estimatedHours) : null,
         dueDate: newTask.dueDate || null
       };
+
+      console.log('Creating task with status:', taskData.status); // Debug log
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/milestones?id=${newTask.milestoneId}&action=tasks`, {
         method: 'POST',
