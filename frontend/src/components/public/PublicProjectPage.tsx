@@ -8,6 +8,8 @@ import UpdatesTab from '@/components/public/tabs/UpdatesTab';
 import MilestonesTab from '@/components/public/tabs/MilestonesTab';
 import IssuesTab from '@/components/public/tabs/IssuesTab';
 import FeedbackTab from '@/components/public/tabs/FeedbackTab';
+import IssueModal from '@/components/public/modals/IssueModal';
+import FeedbackModal from '@/components/public/modals/FeedbackModal';
 
 interface PublicProject {
   id: string;
@@ -64,6 +66,8 @@ export default function PublicProjectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -216,10 +220,7 @@ export default function PublicProjectPage() {
             <div className="flex items-center space-x-4">
               {project.allowIssues && (
                 <button
-                  onClick={() => {
-                    setActiveTab('issues');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
+                  onClick={() => setIsIssueModalOpen(true)}
                   className="flex items-center space-x-2 px-3 py-2 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg transition-all duration-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,10 +232,7 @@ export default function PublicProjectPage() {
               
               {project.allowFeedback && (
                 <button
-                  onClick={() => {
-                    setActiveTab('feedback');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
+                  onClick={() => setIsFeedbackModalOpen(true)}
                   className="flex items-center space-x-2 px-3 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all duration-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,6 +402,30 @@ export default function PublicProjectPage() {
           </div>
         </div>
       </footer>
+      
+      {project && (
+        <>
+          <IssueModal 
+            isOpen={isIssueModalOpen} 
+            onClose={() => setIsIssueModalOpen(false)} 
+            projectTitle={project.title} 
+            projectSlug={project.slug}
+            onIssueCreated={(issue) => {
+              setIsIssueModalOpen(false);
+              if (activeTab !== 'issues') {
+                setActiveTab('issues');
+              }
+            }}
+          />
+          
+          <FeedbackModal 
+            isOpen={isFeedbackModalOpen} 
+            onClose={() => setIsFeedbackModalOpen(false)} 
+            projectTitle={project.title} 
+            projectSlug={project.slug} 
+          />
+        </>
+      )}
     </div>
   );
 } 
