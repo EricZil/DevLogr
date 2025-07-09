@@ -86,11 +86,14 @@ export async function createPublicIssue(slug: string, issueData: any) {
     );
   }
 
+  // Convert empty string to null for database storage
+  const reporterEmail = validatedData.reporterEmail === "" ? null : validatedData.reporterEmail;
+
   const issue = await prisma.issue.create({
     data: {
       projectId: project.id,
       ...validatedData,
-      reporterEmail: validatedData.reporterEmail || null,
+      reporterEmail: reporterEmail,
       status: "OPEN",
     },
   });

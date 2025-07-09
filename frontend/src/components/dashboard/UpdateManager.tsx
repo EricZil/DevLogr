@@ -64,13 +64,16 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setUpdates(data);
+        // Ensure data is always an array
+        setUpdates(Array.isArray(data) ? data : []);
       } else {
         error('Failed to load updates');
+        setUpdates([]); // Initialize as empty array on error
       }
     } catch (err) {
       console.error('Fetch updates error:', err);
       error('An error occurred');
+      setUpdates([]); // Initialize as empty array on error
     } finally {
       setLoading(false);
     }

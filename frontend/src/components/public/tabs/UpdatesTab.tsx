@@ -27,7 +27,10 @@ const getUpdateTypeBadge = (type: string) => {
   }
 };
 
-export default function UpdatesTab({ updates }: UpdatesTabProps) {
+export default function UpdatesTab({ updates = [] }: UpdatesTabProps) {
+  // Ensure updates is always an array
+  const safeUpdates = Array.isArray(updates) ? updates : [];
+  
   return (
     <div className="max-w-7xl mx-auto px-8 py-12">
       {/* Header Stats */}
@@ -36,7 +39,7 @@ export default function UpdatesTab({ updates }: UpdatesTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-zinc-400 text-sm font-medium mb-1">Total Updates</p>
-              <p className="text-3xl font-bold text-white">{updates.length}</p>
+              <p className="text-3xl font-bold text-white">{safeUpdates.length}</p>
             </div>
             <div className="bg-blue-500/20 p-3 rounded-xl">
               <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +53,7 @@ export default function UpdatesTab({ updates }: UpdatesTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-zinc-400 text-sm font-medium mb-1">Features</p>
-              <p className="text-3xl font-bold text-white">{updates.filter(u => u.type === 'FEATURE').length}</p>
+              <p className="text-3xl font-bold text-white">{safeUpdates.filter(u => u.type === 'FEATURE').length}</p>
             </div>
             <div className="bg-emerald-500/20 p-3 rounded-xl">
               <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +67,7 @@ export default function UpdatesTab({ updates }: UpdatesTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-zinc-400 text-sm font-medium mb-1">Progress</p>
-              <p className="text-3xl font-bold text-white">{updates.filter(u => u.type === 'PROGRESS').length}</p>
+              <p className="text-3xl font-bold text-white">{safeUpdates.filter(u => u.type === 'PROGRESS').length}</p>
             </div>
             <div className="bg-purple-500/20 p-3 rounded-xl">
               <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +81,7 @@ export default function UpdatesTab({ updates }: UpdatesTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-zinc-400 text-sm font-medium mb-1">Milestones</p>
-              <p className="text-3xl font-bold text-white">{updates.filter(u => u.type === 'MILESTONE').length}</p>
+              <p className="text-3xl font-bold text-white">{safeUpdates.filter(u => u.type === 'MILESTONE').length}</p>
             </div>
             <div className="bg-yellow-500/20 p-3 rounded-xl">
               <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +105,7 @@ export default function UpdatesTab({ updates }: UpdatesTabProps) {
         </div>
 
         <div className="space-y-6">
-          {updates.map((update) => (
+          {safeUpdates.map((update) => (
             <div key={update.id} className="bg-black/30 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300 overflow-hidden">
               <div className="p-6">
                 <div className="flex items-start space-x-4">
@@ -164,7 +167,7 @@ export default function UpdatesTab({ updates }: UpdatesTabProps) {
           ))}
         </div>
 
-        {updates.length === 0 && (
+        {safeUpdates.length === 0 && (
           <div className="text-center py-16">
             <div className="bg-zinc-800/50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

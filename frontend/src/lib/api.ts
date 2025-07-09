@@ -1,9 +1,7 @@
 import type { ProjectData, Update as ProjectUpdate } from '@/types';
 
-// The API base is now the Next.js server itself, which will proxy to the backend.
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-// Token refresh promise to prevent multiple simultaneous refresh attempts
 let refreshPromise: Promise<boolean> | null = null;
 
 interface ApiResponse<T = unknown> {
@@ -44,19 +42,17 @@ interface LoginData {
 }
 
 interface CreateProjectData {
-  name: string; // 3-60 characters, no special chars, not reserved
-  description?: string; // max 500 characters
+  name: string;
+  description?: string;
   visibility: 'PUBLIC' | 'PRIVATE';
-  tags?: string[]; // max 10 tags, each max 20 chars, no duplicates
+  tags?: string[];
   allowIssues: boolean;
   allowFeedback: boolean;
-  customDomain?: string; // valid domain format, max 253 chars
+  customDomain?: string;
 }
 
 class ApiService {
-  // Automatic token refresh with debouncing
   private async attemptTokenRefresh(): Promise<boolean> {
-    // If refresh is already in progress, wait for it
     if (refreshPromise) {
       return refreshPromise;
     }
@@ -96,21 +92,14 @@ class ApiService {
     options: RequestInit = {},
     skipAuth = false
   ): Promise<ApiResponse<T>> {
-    // Always use the backend API URL - either from env var or default
     const apiBase = API_BASE || 'https://api.devlogr.space';
     const url = `${apiBase}/api${endpoint}`;
-    
-    console.log('Making API request to:', url);
-    
-    // Use the standard Headers object for type safety and correctness.
     const headers = new Headers(options.headers);
 
-    // Set a default Content-Type if one isn't provided.
     if (!headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
     
-    // Add the Authorization header to all authenticated requests.
     if (!skipAuth) {
       const token = this.getAccessToken();
       if (token) {
@@ -121,18 +110,16 @@ class ApiService {
     try {
       const response = await fetch(url, {
         ...options,
-        headers, // Use the safely constructed Headers object
+        headers,
       });
 
       const data = await response.json();
       
-      // Handle token expiration for authenticated requests
       if (!skipAuth && response.status === 401 && (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_ACCESS_TOKEN')) {
         console.log('🔄 Access token expired or invalid, attempting refresh...');
         const refreshSuccess = await this.attemptTokenRefresh();
         
         if (refreshSuccess) {
-          // Retry original request with new token
           const newToken = this.getAccessToken();
           if (newToken) {
             const retryHeaders: Record<string, string> = {
@@ -149,7 +136,6 @@ class ApiService {
           }
         }
         
-        // Refresh failed, redirect to login will be handled by calling component
         this.clearTokens();
       }
       
@@ -174,7 +160,6 @@ class ApiService {
     }
   }
 
-  // Auth methods - Updated to use new consolidated backend structure
   async register(userData: RegisterData): Promise<ApiResponse<{ user: User; tokens: AuthTokens }>> {
     return this.makeRequest<{ user: User; tokens: AuthTokens }>('/auth?action=register', {
       method: 'POST',
@@ -223,7 +208,6 @@ class ApiService {
       body: JSON.stringify({ token: refreshToken }),
     }, true);
 
-    // If refresh token is invalid, clear all tokens
     if (!response.success && response.code === 'INVALID_REFRESH_TOKEN') {
       this.clearTokens();
     }
@@ -231,7 +215,6 @@ class ApiService {
     return response;
   }
 
-  // Project methods - Updated to use new consolidated backend structure
   async getProjects(): Promise<ApiResponse<ProjectData[]>> {
     return this.makeRequest('/projects');
   }
@@ -246,7 +229,7 @@ class ApiService {
   async checkSlugAvailability(slug: string): Promise<ApiResponse<{ available: boolean }>> {
     return this.makeRequest(`/projects?action=check-slug&slug=${encodeURIComponent(slug)}`, {
         method: 'GET',
-    }, true); // This is a public endpoint, so skip auth
+    }, true);
   }
 
   async getDomainVerificationStatus(projectId: string): Promise<ApiResponse<{ 
@@ -315,7 +298,7 @@ class ApiService {
   }>> {
     return this.makeRequest(`/projects?action=check-domain&domain=${encodeURIComponent(domain)}`, {
       method: 'GET',
-    }, true); // This is a public endpoint
+    }, true);
   }
 
   async getPublicProject(identifier: string, type: 'slug' | 'domain'): Promise<ApiResponse<{
@@ -363,19 +346,16 @@ class ApiService {
       createdAt: string;
     }>;
   }>> {
-    // Use the dedicated public API endpoint
     const param = type === 'slug' ? `slug=${encodeURIComponent(identifier)}` : `domain=${encodeURIComponent(identifier)}`;
     return this.makeRequest(`/public?action=project&${param}`, {
       method: 'GET',
-    }, true); // Public endpoint, no auth needed
+    }, true);
   }
 
-  // Update methods - Updated to use new consolidated backend structure
   async getRecentUpdates(limit: number): Promise<ApiResponse<ProjectUpdate[]>> {
     return this.makeRequest(`/updates?action=recent&limit=${limit}`);
   }
 
-  // Token management
   saveTokens(tokens: AuthTokens): void {
     localStorage.setItem('accessToken', tokens.accessToken);
     localStorage.setItem('refreshToken', tokens.refreshToken);
@@ -399,7 +379,6 @@ class ApiService {
   isTokenExpired(): boolean {
     const expiry = localStorage.getItem('tokenExpiry');
     if (!expiry) return true;
-    // Add 5-minute buffer to refresh tokens before they expire
     return Date.now() > (parseInt(expiry) - 5 * 60 * 1000);
   }
 
@@ -407,21 +386,18 @@ class ApiService {
     return !!this.getAccessToken() && !this.isTokenExpired();
   }
 
-  // Get time until token expires in minutes
   getTokenTimeLeft(): number {
     const expiry = localStorage.getItem('tokenExpiry');
     if (!expiry) return 0;
     return Math.max(0, Math.floor((parseInt(expiry) - Date.now()) / (60 * 1000)));
   }
 
-  // Get API key for authenticated requests (returns access token)
   async getApiKey(): Promise<string> {
     const token = this.getAccessToken();
     if (!token) {
       throw new Error('No access token available');
     }
     
-    // Check if token is expired and try to refresh
     if (this.isTokenExpired()) {
       const refreshSuccess = await this.attemptTokenRefresh();
       if (refreshSuccess) {
@@ -442,24 +418,20 @@ class ApiService {
 export const api = new ApiService();
 export type { User, AuthTokens, RegisterData, LoginData, ApiResponse, CreateProjectData };
 
-// Domain detection utilities for handling subdomains and custom domains
 export const domainUtils = {
-  // Detect if we're on a subdomain vs main domain vs custom domain
   getDomainInfo(): { 
     type: 'main' | 'subdomain' | 'custom';
     slug?: string;
     customDomain?: string;
   } {
     if (typeof window === 'undefined') {
-      return { type: 'main' }; // SSR fallback
+      return { type: 'main' };
     }
 
     const hostname = window.location.hostname;
     const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1') || hostname.endsWith('.localhost');
     
-    // For local development - check for subdomain testing in localhost
     if (isLocalhost) {
-      // Check if it's a subdomain on localhost (e.g., test.localhost:3000)
       if (hostname.includes('.localhost')) {
         const slug = hostname.split('.localhost')[0];
         return { type: 'subdomain', slug };
@@ -467,32 +439,26 @@ export const domainUtils = {
       return { type: 'main' };
     }
 
-    // Check if it's our main domain
     if (hostname === 'devlogr.space' || hostname === 'www.devlogr.space') {
       return { type: 'main' };
     }
 
-    // Check if it's a subdomain of devlogr.space
     if (hostname.endsWith('.devlogr.space')) {
       const slug = hostname.replace('.devlogr.space', '');
-      // Skip API and proxy subdomains
       if (slug === 'api' || slug === 'proxy' || slug === 'www') {
         return { type: 'main' };
       }
       return { type: 'subdomain', slug };
     }
 
-    // Otherwise it's a custom domain
     return { type: 'custom', customDomain: hostname };
   },
 
-  // Check if current domain should show public project page
   shouldShowPublicProject(): boolean {
     const { type } = this.getDomainInfo();
     return type === 'subdomain' || type === 'custom';
   },
 
-  // Get the project identifier (slug for subdomain, domain for custom)
   getProjectIdentifier(): string | null {
     const { type, slug, customDomain } = this.getDomainInfo();
     if (type === 'subdomain') return slug || null;
