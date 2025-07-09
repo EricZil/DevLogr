@@ -35,7 +35,7 @@ export default function FeedbackModal({ isOpen, onClose, projectTitle, projectSl
           rating: formData.rating,
           category: formData.category,
           submitterName: formData.submitterName.trim(),
-          submitterEmail: formData.submitterEmail.trim() || null,
+          submitterEmail: formData.submitterEmail.trim() || '',
         })
       });
 

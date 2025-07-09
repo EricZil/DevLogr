@@ -57,7 +57,7 @@ export default function IssueModal({ isOpen, onClose, projectTitle, projectSlug,
           priority: formData.priority,
           category: formData.category,
           reporterName: formData.reporterName.trim(),
-          reporterEmail: formData.reporterEmail?.trim() || null
+          reporterEmail: formData.reporterEmail?.trim() || ''
         })
       });
 

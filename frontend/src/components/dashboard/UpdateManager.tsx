@@ -31,9 +31,7 @@ const UPDATE_TYPES: Array<Update['type']> = [
   'RELEASE',
 ];
 
-type ApiWithKey = {
-  getApiKey: () => Promise<string>;
-};
+
 
 export default function UpdateManager({ projectId }: UpdateManagerProps) {
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -52,14 +50,12 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
     try {
       setLoading(true);
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?projectId=${projectId}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=updates`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'X-API-Key': apiKey,
           },
           credentials: 'include',
         }
@@ -67,13 +63,15 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setUpdates(data);
+        setUpdates(Array.isArray(data) ? data : []);
       } else {
         error('Failed to load updates');
+        setUpdates([]);
       }
     } catch (err) {
       console.error('Fetch updates error:', err);
       error('An error occurred');
+      setUpdates([]);
     } finally {
       setLoading(false);
     }
@@ -82,14 +80,12 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
   const fetchStats = useCallback(async () => {
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?projectId=${projectId}&action=stats`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=updates&subaction=stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'X-API-Key': apiKey,
           },
           credentials: 'include',
         }
@@ -117,16 +113,14 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
 
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?projectId=${projectId}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects?id=${projectId}&action=updates`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
-            'X-API-Key': apiKey,
           },
           credentials: 'include',
           body: JSON.stringify(newUpdate),
@@ -152,14 +146,12 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
     if (!confirm('Delete this update?')) return;
     try {
       const token = api.getAccessToken();
-      const apiKey = await (api as unknown as ApiWithKey).getApiKey();
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/updates?id=${id}`,
         {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
-            'X-API-Key': apiKey,
           },
           credentials: 'include',
         }
