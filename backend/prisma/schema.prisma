@@ -275,8 +275,10 @@ model Task {
   
   @@index([milestoneId])
   @@index([milestoneId, order])
+  @@index([milestoneId, status]) // Optimize milestone progress queries
   @@index([status])
   @@index([assigneeId])
+  @@index([milestoneId, updatedAt]) // Optimize progress calculations
   @@map("tasks")
 }
 

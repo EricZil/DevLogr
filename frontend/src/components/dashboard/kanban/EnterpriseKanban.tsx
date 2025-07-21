@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -8,6 +8,18 @@ import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Task } from '@/types';
+
+// Utility function for throttling high-frequency operations
+const throttle = <T extends unknown[]>(func: (...args: T) => void, limit: number) => {
+  let inThrottle: boolean;
+  return function executedFunction(...args: T) {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
 
 interface EnterpriseKanbanProps {
   tasks: Task[];
@@ -193,85 +205,103 @@ export default function EnterpriseKanban({ tasks, onTaskMove, onTaskClick }: Ent
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const activeCardRef = useRef<HTMLElement | null>(null);
 
-  // Track mouse position during drag
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (activeId) {
-        setMousePosition({ x: e.clientX, y: e.clientY });
+  // Optimized mouse tracking with throttling and memoization
+  const throttledMouseMove = useMemo(
+    () => throttle((e: MouseEvent) => {
+      if (!activeId) return;
+      
+      // Update mouse position for drag overlay
+      setMousePosition({ x: e.clientX, y: e.clientY });
+      
+      // Update card position based on mouse position and drag offset
+      const newCardPosition = {
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+        width: cardPosition.width,
+        height: cardPosition.height
+      };
+      setCardPosition(newCardPosition);
+    }, 16), // ~60fps throttling
+    [activeId, dragOffset, cardPosition.width, cardPosition.height]
+  );
+
+  // Separate throttled function for column detection (less frequent)
+  const throttledColumnDetection = useMemo(
+    () => throttle((e: MouseEvent) => {
+      if (!activeId || Object.keys(columnBounds).length === 0) return;
+      
+      // Try to find the column the cursor is over
+      let hoveredColumn = Object.entries(columnBounds).find(([, rect]) => {
+        if (!rect) return false;
+        return e.clientX >= rect.left &&
+               e.clientX <= rect.right &&
+               e.clientY >= rect.top &&
+               e.clientY <= rect.bottom;
+      });
+      
+      // If no column found, try to find the closest column
+      if (!hoveredColumn) {
+        // Find the closest column by distance (considering both horizontal and vertical)
+        let closestDistance = Infinity;
+        let closestColumn: [string, DOMRect | null] | null = null;
         
-        // Update card position based on mouse position and drag offset
-        const newCardPosition = {
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
-          width: cardPosition.width,
-          height: cardPosition.height
-        };
-        setCardPosition(newCardPosition);
-        
-        // Check if cursor is within any column bounds
-        if (Object.keys(columnBounds).length > 0) {
-          // Try to find the column the cursor is over
-          let hoveredColumn = Object.entries(columnBounds).find(([, rect]) => {
-            if (!rect) return false;
-            return e.clientX >= rect.left && 
-                   e.clientX <= rect.right && 
-                   e.clientY >= rect.top && 
-                   e.clientY <= rect.bottom;
-          });
+        Object.entries(columnBounds).forEach(([id, rect]) => {
+          if (!rect) return;
           
-          // If no column found, try to find the closest column
-          if (!hoveredColumn) {
-            // Find the closest column by distance (considering both horizontal and vertical)
-            let closestDistance = Infinity;
-            let closestColumn: [string, DOMRect | null] | null = null;
-            
-            Object.entries(columnBounds).forEach(([id, rect]) => {
-              if (!rect) return;
-              
-              // Calculate center point of card
-              const cardCenterX = newCardPosition.x + (newCardPosition.width / 2);
-              const cardCenterY = newCardPosition.y + (newCardPosition.height / 2);
-              
-              // Calculate distance to column
-              let distanceX = 0;
-              if (cardCenterX < rect.left) {
-                distanceX = rect.left - cardCenterX;
-              } else if (cardCenterX > rect.right) {
-                distanceX = cardCenterX - rect.right;
-              }
-              
-              let distanceY = 0;
-              if (cardCenterY < rect.top) {
-                distanceY = rect.top - cardCenterY;
-              } else if (cardCenterY > rect.bottom) {
-                distanceY = cardCenterY - rect.bottom;
-              }
-              
-              // Use Euclidean distance for better spatial awareness
-              const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-              
-              if (distance < closestDistance) {
-                closestDistance = distance;
-                closestColumn = [id, rect];
-              }
-            });
-            
-            // If we found a close column and it's within a reasonable distance (150px)
-            if (closestColumn && closestDistance < 150) {
-              hoveredColumn = closestColumn;
-            }
+          // Calculate center point of card
+          const cardCenterX = e.clientX - dragOffset.x + (cardPosition.width / 2);
+          const cardCenterY = e.clientY - dragOffset.y + (cardPosition.height / 2);
+          
+          // Calculate distance to column
+          let distanceX = 0;
+          if (cardCenterX < rect.left) {
+            distanceX = rect.left - cardCenterX;
+          } else if (cardCenterX > rect.right) {
+            distanceX = cardCenterX - rect.right;
           }
           
-          setDragTarget(hoveredColumn ? hoveredColumn[0] : null);
+          let distanceY = 0;
+          if (cardCenterY < rect.top) {
+            distanceY = rect.top - cardCenterY;
+          } else if (cardCenterY > rect.bottom) {
+            distanceY = cardCenterY - rect.bottom;
+          }
+          
+          // Use Euclidean distance for better spatial awareness
+          const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+          
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestColumn = [id, rect];
+          }
+        });
+        
+        // If we found a close column and it's within a reasonable distance (150px)
+        if (closestColumn && closestDistance < 150) {
+          hoveredColumn = closestColumn;
         }
       }
+      
+      setDragTarget(hoveredColumn ? hoveredColumn[0] : null);
+    }, 32), // ~30fps throttling for column detection
+    [activeId, columnBounds, dragOffset, cardPosition.width, cardPosition.height]
+  );
+
+  // Track mouse position during drag with optimized event handling
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      throttledMouseMove(e);
+      throttledColumnDetection(e);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    if (activeId) {
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    }
+    
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [activeId, columnBounds, dragOffset, cardPosition.width, cardPosition.height]);
+  }, [activeId, throttledMouseMove, throttledColumnDetection]);
 
   // Calculate column bounds on mount and window resize
   useEffect(() => {
@@ -391,25 +421,27 @@ export default function EnterpriseKanban({ tasks, onTaskMove, onTaskClick }: Ent
     setDragTarget(null);
   };
 
-  // Completely custom drag overlay implementation
-  const CustomDragOverlay = () => {
+  // Optimized custom drag overlay implementation with memoized styles
+  const dragStyles = useMemo((): React.CSSProperties => ({
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: `${cardPosition.width}px`,
+    height: `${cardPosition.height}px`,
+    pointerEvents: 'none',
+    zIndex: 9999,
+    transform: `translate3d(${mousePosition.x - dragOffset.x}px, ${mousePosition.y - dragOffset.y}px, 0)`,
+    opacity: 0.9,
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    transition: 'none', // Remove transition for immediate response
+    willChange: 'transform', // Hardware acceleration hint
+    transformOrigin: '0 0',
+    backfaceVisibility: 'hidden', // Optimize for 3D transforms
+    perspective: 1000, // Enable hardware acceleration
+  }), [cardPosition.width, cardPosition.height, mousePosition.x, mousePosition.y, dragOffset.x, dragOffset.y]);
+
+  const CustomDragOverlay = useCallback(() => {
     if (!activeId || !activeTask || !activeCardRef.current) return null;
-    
-    const dragStyles: React.CSSProperties = {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: `${cardPosition.width}px`,
-      height: `${cardPosition.height}px`,
-      pointerEvents: 'none',
-      zIndex: 9999,
-      transform: `translate3d(${mousePosition.x - dragOffset.x}px, ${mousePosition.y - dragOffset.y}px, 0)`,
-      opacity: 0.9,
-      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-      transition: 'none', // Remove transition for immediate response
-      willChange: 'transform', // Hardware acceleration hint
-      transformOrigin: '0 0',
-    };
     
     return createPortal(
       <div style={dragStyles} className="task-drag-overlay">
@@ -417,7 +449,7 @@ export default function EnterpriseKanban({ tasks, onTaskMove, onTaskClick }: Ent
       </div>,
       document.body
     );
-  };
+  }, [activeId, activeTask, dragStyles]);
 
   return (
     <div className="h-full flex flex-col">
