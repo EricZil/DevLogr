@@ -3,7 +3,26 @@ import { Redis } from '@upstash/redis';
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  retry: {
+    retries: 2,
+    backoff: (retryCount) => Math.min(retryCount * 50, 500),
+  },
 });
+
+const REDIS_TIMEOUT = 1000;
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = REDIS_TIMEOUT): Promise<T | null> => {
+  const timeoutPromise = new Promise<null>((_, reject) => {
+    setTimeout(() => reject(new Error('Redis operation timeout')), timeoutMs);
+  });
+  
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } catch (error) {
+    console.error('Redis operation failed:', error);
+    return null;
+  }
+};
 
 const TTL = {
   SHORT: 30,
@@ -22,7 +41,7 @@ export const cacheKeys = {
 export const cache = {
   async get<T>(key: string): Promise<T | null> {
     try {
-      const data = await redis.get(key);
+      const data = await withTimeout(redis.get(key));
       return data as T;
     } catch (error) {
       console.error(`Cache get error for key ${key}:`, error);
@@ -32,7 +51,8 @@ export const cache = {
 
   async set<T>(key: string, value: T, ttl: number = TTL.MEDIUM): Promise<boolean> {
     try {
-      await redis.setex(key, ttl, JSON.stringify(value));
+      withTimeout(redis.setex(key, ttl, JSON.stringify(value))).catch(error => {
+      });
       return true;
     } catch (error) {
       console.error(`Cache set error for key ${key}:`, error);
@@ -119,12 +139,27 @@ export async function cacheOrFetch<T>(
   fetchFn: () => Promise<T>,
   ttl: number = TTL.MEDIUM
 ): Promise<T> {
-  const cached = await cache.get<T>(key);
-  if (cached !== null) {
-    return cached;
-  }
+  const cachePromise = cache.get<T>(key);
+  const fetchPromise = fetchFn();
   
-  const data = await fetchFn();
+  try {
+    const cached = await Promise.race([
+      cachePromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 100))
+    ]);
+    
+    if (cached !== null) {
+      fetchPromise.then(data => {
+        cache.set(key, data, ttl).catch(error => {
+        });
+      }).catch(() => {});
+      
+      return cached;
+    }
+  } catch (error) {
+  }
+
+  const data = await fetchPromise;
   
   cache.set(key, data, ttl).catch(error => {
     console.error(`Failed to cache data for key ${key}:`, error);
