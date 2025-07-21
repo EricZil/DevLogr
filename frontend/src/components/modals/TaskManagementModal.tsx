@@ -23,10 +23,13 @@ export default function TaskManagementModal({
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'subtasks' | 'details'>('overview');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
 
   useEffect(() => {
     if (task) {
       setUpdatedTask({ ...task });
+      setEditedTitle(task.title);
     }
   }, [task]);
 
@@ -208,6 +211,88 @@ export default function TaskManagementModal({
     }
   };
 
+  const updateTaskTitle = async () => {
+    if (!updatedTask || !editedTitle.trim() || editedTitle === updatedTask.title) {
+      setIsEditingTitle(false);
+      setEditedTitle(updatedTask?.title || '');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const token = api.getAccessToken();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks?id=${updatedTask.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: editedTitle.trim()
+        })
+      });
+
+      if (response.ok) {
+        setUpdatedTask(prev => prev ? { ...prev, title: editedTitle.trim() } : null);
+        setIsEditingTitle(false);
+        showToast('Task title updated!', 'success');
+        onTaskUpdated();
+      } else {
+        showToast('Failed to update task title', 'error');
+        setEditedTitle(updatedTask.title);
+      }
+    } catch (error) {
+      console.error('Failed to update task title:', error);
+      showToast('An error occurred', 'error');
+      setEditedTitle(updatedTask.title);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const updateTaskPriority = async (newPriority: Task['priority']) => {
+    if (!updatedTask || newPriority === updatedTask.priority) return;
+
+    try {
+      setIsUpdating(true);
+      const token = api.getAccessToken();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks?id=${updatedTask.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          priority: newPriority
+        })
+      });
+
+      if (response.ok) {
+        setUpdatedTask(prev => prev ? { ...prev, priority: newPriority } : null);
+        showToast('Task priority updated!', 'success');
+        onTaskUpdated();
+      } else {
+        showToast('Failed to update task priority', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to update task priority:', error);
+      showToast('An error occurred', 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleTitleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      updateTaskTitle();
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false);
+      setEditedTitle(updatedTask?.title || '');
+    }
+  };
+
   if (!isOpen || !updatedTask) return null;
 
   const completedSubtasks = updatedTask.subtasks.filter(st => st.completed).length;
@@ -216,27 +301,51 @@ export default function TaskManagementModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md p-1 sm:p-2 lg:p-4">
+      <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/70 backdrop-blur-md p-1 sm:p-2 lg:p-4 pt-32 sm:pt-36 lg:pt-40">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", duration: 0.5 }}
-          className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-black border border-white/10 rounded-2xl w-full max-w-6xl max-h-[98vh] flex flex-col shadow-2xl overflow-hidden"
-          style={{ 
-            minHeight: 'min(600px, 85vh)',
+          className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-black border border-white/10 rounded-2xl w-full max-w-6xl max-h-[calc(100vh-12rem)] flex flex-col shadow-2xl overflow-hidden"
+          style={{
+            minHeight: 'min(500px, calc(100vh - 14rem))',
             zoom: '1',
             transform: 'scale(1)'
           }}
         >
           <div className="relative border-b border-white/10 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 bg-black/60 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 group">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 ${getStatusColor(updatedTask.status)}`}>
                   <span className="text-xl">{getStatusIcon(updatedTask.status)}</span>
                 </div>
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white line-clamp-1">{updatedTask.title}</h2>
+                <div className="flex-1">
+                  {isEditingTitle ? (
+                    <input
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      onBlur={updateTaskTitle}
+                      onKeyDown={handleTitleKeyPress}
+                      className="text-xl sm:text-2xl font-bold text-white bg-transparent border-b-2 border-blue-500 focus:outline-none focus:border-blue-400 w-full"
+                      autoFocus
+                      disabled={isUpdating}
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-xl sm:text-2xl font-bold text-white line-clamp-1">{updatedTask.title}</h2>
+                      <button
+                        onClick={() => setIsEditingTitle(true)}
+                        className="p-1 hover:bg-white/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit task title"
+                      >
+                        <svg className="w-4 h-4 text-zinc-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-3 text-xs sm:text-sm mt-1">
                     <span className={`px-2 py-1 rounded-full border ${getPriorityColor(updatedTask.priority)}`}>
                       {getPriorityIcon(updatedTask.priority)} {updatedTask.priority}
@@ -256,6 +365,7 @@ export default function TaskManagementModal({
                 </svg>
               </button>
             </div>
+
             <div className="flex mt-6 space-x-1 bg-black/30 p-1 rounded-xl border border-white/10">
               {[
                 { id: 'overview', label: 'Overview', icon: '📊' },
@@ -491,6 +601,31 @@ export default function TaskManagementModal({
               <div className="w-80 border-l border-white/10 bg-black/20 backdrop-blur-sm overflow-y-auto">
                 <div className="p-4 sm:p-6">
                   <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-zinc-300 mb-3">Update Priority</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map((priority) => (
+                        <button
+                          key={priority}
+                          onClick={() => updateTaskPriority(priority)}
+                          disabled={updatedTask.priority === priority || isUpdating}
+                          className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            updatedTask.priority === priority
+                              ? `${getPriorityColor(priority)} ring-2 ring-blue-500/50`
+                              : 'border-white/10 bg-black/20 hover:border-white/20'
+                          }`}
+                        >
+                          <span className="text-xl mb-1">{getPriorityIcon(priority)}</span>
+                          <span className="text-xs font-medium text-white">{priority}</span>
+                          {updatedTask.priority === priority && (
+                            <svg className="w-3 h-3 mt-1 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="mb-6">
                     <label className="block text-sm font-semibold text-zinc-300 mb-3">Update Status</label>
