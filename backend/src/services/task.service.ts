@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../lib/error-handler";
 import { z } from "zod";
 import { cache, cacheKeys, cacheOrFetch, invalidateCache, TTL } from '../utils/cache';
+import { measureDbQuery, measureCacheOp, PerformanceMonitor } from '../utils/performance';
 
 // ===========================
 // HELPER FUNCTIONS
@@ -272,31 +273,54 @@ export async function getTask(taskId: string, userId: string) {
 }
 
 export async function updateTask(taskId: string, userId: string, taskData: any) {
-  console.time(`updateTask-${taskId}`);
+  const operationId = `updateTask_${taskId}`;
+  PerformanceMonitor.start(operationId);
   
-  const existingTask = await verifyTaskOwnership(taskId, userId);
-  const validatedData = updateTaskSchema.parse(taskData);
-  
-  const updatePayload: any = { ...validatedData };
-  if(validatedData.dueDate !== undefined) updatePayload.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
-  if(validatedData.startDate !== undefined) updatePayload.startDate = validatedData.startDate ? new Date(validatedData.startDate) : null;
-  if (validatedData.status && validatedData.status !== existingTask.status) {
-    updatePayload.completedAt = validatedData.status === 'DONE' ? new Date() : null;
-  }
+  try {
+    // STEP 1: Verify ownership (measure DB query)
+    const existingTask = await measureDbQuery('verifyTaskOwnership', () =>
+      verifyTaskOwnership(taskId, userId)
+    );
+    
+    // STEP 2: Validate data (fast operation)
+    const validatedData = updateTaskSchema.parse(taskData);
+    
+    // STEP 3: Prepare update payload
+    const updatePayload: any = { ...validatedData };
+    if(validatedData.dueDate !== undefined) updatePayload.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
+    if(validatedData.startDate !== undefined) updatePayload.startDate = validatedData.startDate ? new Date(validatedData.startDate) : null;
+    if (validatedData.status && validatedData.status !== existingTask.status) {
+      updatePayload.completedAt = validatedData.status === 'DONE' ? new Date() : null;
+    }
 
-  const updatedTask = await prisma.task.update({
-    where: { id: taskId },
-    data: updatePayload,
-  });
-  
-  // Invalidate related caches immediately
-  await invalidateCache.milestone(existingTask.milestoneId);
-  
-  // CRITICAL PERFORMANCE FIX: Use async progress update to avoid blocking response
-  updateMilestoneProgressAsync(existingTask.milestoneId);
-  
-  console.timeEnd(`updateTask-${taskId}`);
-  return updatedTask;
+    // STEP 4: Update task in database (measure DB query)
+    const updatedTask = await measureDbQuery('updateTaskQuery', () =>
+      prisma.task.update({
+        where: { id: taskId },
+        data: updatePayload,
+      })
+    );
+    
+    // STEP 5: Invalidate caches (measure cache operations)
+    await measureCacheOp('invalidateCache', existingTask.milestoneId, () =>
+      invalidateCache.milestone(existingTask.milestoneId)
+    );
+    
+    // STEP 6: CRITICAL PERFORMANCE FIX: Use async progress update to avoid blocking response
+    updateMilestoneProgressAsync(existingTask.milestoneId);
+    
+    const totalDuration = PerformanceMonitor.end(operationId);
+    
+    // Log performance breakdown if slow
+    if (totalDuration > 1000) {
+      console.error(`🚨 CRITICAL: updateTask took ${totalDuration.toFixed(2)}ms for task ${taskId}`);
+    }
+    
+    return updatedTask;
+  } catch (error) {
+    PerformanceMonitor.end(operationId);
+    throw error;
+  }
 }
 
 export async function deleteTask(taskId: string, userId: string) {

@@ -1,10 +1,31 @@
 import { Redis } from '@upstash/redis';
 
-// Initialize Upstash Redis client
+// Initialize Upstash Redis client with performance optimizations
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  // CRITICAL: Add timeout and retry configuration to prevent hanging requests
+  retry: {
+    retries: 2, // Reduced from default 5 to fail faster
+    backoff: (retryCount) => Math.min(retryCount * 50, 500), // Max 500ms backoff
+  },
 });
+
+// Add request timeout wrapper to prevent Redis from hanging
+const REDIS_TIMEOUT = 1000; // 1 second timeout
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = REDIS_TIMEOUT): Promise<T | null> => {
+  const timeoutPromise = new Promise<null>((_, reject) => {
+    setTimeout(() => reject(new Error('Redis operation timeout')), timeoutMs);
+  });
+  
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } catch (error) {
+    console.error('Redis operation failed:', error);
+    return null;
+  }
+};
 
 // Cache TTL settings (in seconds)
 const TTL = {
@@ -22,12 +43,12 @@ export const cacheKeys = {
   projectMilestones: (projectId: string) => `project:${projectId}:milestones`,
 };
 
-// Cache wrapper functions with Redis
+// Cache wrapper functions with Redis and timeout protection
 export const cache = {
-  // Get data from cache
+  // Get data from cache with timeout protection
   async get<T>(key: string): Promise<T | null> {
     try {
-      const data = await redis.get(key);
+      const data = await withTimeout(redis.get(key));
       return data as T;
     } catch (error) {
       console.error(`Cache get error for key ${key}:`, error);
@@ -35,11 +56,14 @@ export const cache = {
     }
   },
 
-  // Set data in cache with TTL
+  // Set data in cache with TTL and timeout protection
   async set<T>(key: string, value: T, ttl: number = TTL.MEDIUM): Promise<boolean> {
     try {
-      await redis.setex(key, ttl, JSON.stringify(value));
-      return true;
+      // Use fire-and-forget approach for cache writes to avoid blocking
+      withTimeout(redis.setex(key, ttl, JSON.stringify(value))).catch(error => {
+        console.error(`Cache set error for key ${key}:`, error);
+      });
+      return true; // Return immediately, don't wait for Redis
     } catch (error) {
       console.error(`Cache set error for key ${key}:`, error);
       return false;
@@ -130,20 +154,39 @@ export const invalidateCache = {
   },
 };
 
-// Utility function for cache-or-fetch pattern
+// CRITICAL PERFORMANCE FIX: Cache-or-fetch pattern with timeout protection
 export async function cacheOrFetch<T>(
   key: string,
   fetchFn: () => Promise<T>,
   ttl: number = TTL.MEDIUM
 ): Promise<T> {
-  // Try to get from cache first
-  const cached = await cache.get<T>(key);
-  if (cached !== null) {
-    return cached;
-  }
+  // Race cache vs fetch - don't let slow cache block the response
+  const cachePromise = cache.get<T>(key);
+  const fetchPromise = fetchFn();
   
-  // If not in cache, fetch the data
-  const data = await fetchFn();
+  try {
+    // Give cache 100ms to respond, otherwise proceed with fetch
+    const cached = await Promise.race([
+      cachePromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 100))
+    ]);
+    
+    if (cached !== null) {
+      // Cache hit - update cache in background for freshness
+      fetchPromise.then(data => {
+        cache.set(key, data, ttl).catch(error => {
+          console.error(`Background cache update failed for key ${key}:`, error);
+        });
+      }).catch(() => {}); // Ignore fetch errors in background
+      
+      return cached;
+    }
+  } catch (error) {
+    console.error(`Cache retrieval failed for key ${key}:`, error);
+  }
+
+  // Cache miss or timeout - fetch from source
+  const data = await fetchPromise;
   
   // Store in cache for next time (fire and forget)
   cache.set(key, data, ttl).catch(error => {
