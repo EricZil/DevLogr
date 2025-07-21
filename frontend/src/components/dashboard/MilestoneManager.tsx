@@ -171,6 +171,17 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     fetchAllTasks();
   }, [projectId, fetchMilestones, fetchStats, fetchAllTasks]);
 
+  // Periodic background refresh for milestone progress (non-blocking)
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      // Only refresh milestones/stats periodically, not on every task update
+      fetchMilestones();
+      fetchStats();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [fetchMilestones, fetchStats]);
+
   // Fetch tasks for a specific milestone
   const fetchMilestoneTasks = async (milestoneId: string) => {
     try {
@@ -249,11 +260,9 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         // Success - optimistic update was correct
         success('Task status updated!');
         
-        // Optional: Refresh milestone progress in background (non-blocking)
-        setTimeout(() => {
-          fetchMilestones();
-          fetchStats();
-        }, 100);
+        // REMOVED: Background refresh that was causing cascade of API calls
+        // The backend now handles milestone progress updates asynchronously
+        // No need to refresh milestones/stats immediately after each task update
       } else {
         // Rollback optimistic update
         const rollbackTaskStatus = (taskList: Task[]) =>
@@ -290,14 +299,14 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   };
 
   const handleTaskUpdated = () => {
-    // Refresh tasks after task update
+    // Refresh tasks after task update (but not milestones/stats to avoid cascade)
     if (selectedMilestone) {
       fetchMilestoneTasks(selectedMilestone.id);
     } else {
       fetchAllTasks();
     }
-    fetchMilestones();
-    fetchStats();
+    // REMOVED: fetchMilestones() and fetchStats() to prevent API cascade
+    // Backend handles milestone progress updates asynchronously
   };
 
   const handleCreateTask = () => {
@@ -305,14 +314,14 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   };
 
   const handleTaskCreated = () => {
-    // Refresh tasks and milestones after task creation
+    // Refresh tasks after task creation (but not milestones/stats to avoid cascade)
     if (selectedMilestone) {
       fetchMilestoneTasks(selectedMilestone.id);
     } else {
       fetchAllTasks();
     }
-    fetchMilestones();
-    fetchStats();
+    // REMOVED: fetchMilestones() and fetchStats() to prevent API cascade
+    // Backend handles milestone progress updates asynchronously
   };
 
   const handleMilestoneSelect = (milestone: Milestone) => {
