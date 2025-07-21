@@ -167,6 +167,15 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     fetchAllTasks();
   }, [projectId, fetchMilestones, fetchStats, fetchAllTasks]);
 
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      fetchMilestones();
+      fetchStats();
+    }, 30000);
+
+    return () => clearInterval(refreshInterval);
+  }, [fetchMilestones, fetchStats]);
+
   const fetchMilestoneTasks = async (milestoneId: string) => {
     try {
       setLoadingTasks(true);
@@ -238,11 +247,6 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
 
       if (response.ok) {
         success('Task status updated!');
-        
-        setTimeout(() => {
-          fetchMilestones();
-          fetchStats();
-        }, 100);
       } else {
         const rollbackTaskStatus = (taskList: Task[]) =>
           taskList.map(task =>
@@ -282,8 +286,6 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     } else {
       fetchAllTasks();
     }
-    fetchMilestones();
-    fetchStats();
   };
 
   const handleCreateTask = () => {
@@ -296,8 +298,6 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
     } else {
       fetchAllTasks();
     }
-    fetchMilestones();
-    fetchStats();
   };
 
   const handleMilestoneSelect = (milestone: Milestone) => {
