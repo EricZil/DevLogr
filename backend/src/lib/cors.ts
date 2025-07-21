@@ -4,6 +4,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const allowedOrigins = [
   'http://localhost:3000',
   'https://devlogr.space',
+  'https://api.devlogr.space',
+  'https://www.devlogr.space',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -57,10 +59,11 @@ export async function applyCors(
     
     const origin = req.headers.origin;
     if (origin) {
-      if (allowedOrigins.includes(origin) || 
-          origin.endsWith('.devlogr.space') || 
+      if (allowedOrigins.includes(origin) ||
+          origin.endsWith('.devlogr.space') ||
           origin.includes('localhost') ||
-          origin.endsWith('.vercel.app')) {
+          origin.endsWith('.vercel.app') ||
+          origin === 'https://api.devlogr.space') {
         res.setHeader('Access-Control-Allow-Origin', origin);
       }
     }
