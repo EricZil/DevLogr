@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../lib/error-handler";
 import { z } from "zod";
+import { cache, cacheKeys, cacheOrFetch, invalidateCache, TTL } from '../utils/cache';
 
 async function verifyTaskOwnership(taskId: string, userId: string) {
   const task = await prisma.task.findFirst({
@@ -29,17 +30,31 @@ async function verifySubtaskOwnership(subtaskId: string, userId: string) {
 
 export async function updateMilestoneProgress(milestoneId: string) {
   const tasks = await prisma.task.findMany({
-    where: { milestoneId },
-    include: { subtasks: true },
+    where: {
+      milestoneId,
+      status: { not: "CANCELLED" }
+    },
+    select: {
+      id: true,
+      status: true,
+      subtasks: {
+        select: { completed: true }
+      }
+    }
   });
 
   if (tasks.length === 0) {
+    const progress = 0;
     await prisma.milestone.update({
       where: { id: milestoneId },
-      data: { progress: 0 },
+      data: { progress },
     });
-    return;
+    
+    await cache.set(cacheKeys.milestoneProgress(milestoneId), progress, TTL.SHORT);
+    console.timeEnd(`updateMilestoneProgress-${milestoneId}`);
+    return progress;
   }
+
   let totalWeight = 0;
   let completedWeight = 0;
   const statusWeights: Record<string, number> = {
@@ -51,17 +66,28 @@ export async function updateMilestoneProgress(milestoneId: string) {
   };
 
   for (const task of tasks) {
-    if (task.status === "CANCELLED") continue;
     const weight = 1;
     totalWeight += weight;
     let taskCompletion = statusWeights[task.status] || 0;
+    
     if (task.subtasks.length > 0) {
-      const completedSubtasks = task.subtasks.filter((st: any) => st.completed).length;
+      const completedSubtasks = task.subtasks.filter(st => st.completed).length;
       const subtaskProgress = completedSubtasks / task.subtasks.length;
-      if (task.status === "TODO") taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.4);
-      else if (task.status === "IN_PROGRESS") taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.7);
-      else if (task.status === "IN_REVIEW") taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.9);
-      else if (task.status === "DONE") taskCompletion = 1.0;
+      
+      switch (task.status) {
+        case "TODO":
+          taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.4);
+          break;
+        case "IN_PROGRESS":
+          taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.7);
+          break;
+        case "IN_REVIEW":
+          taskCompletion = Math.max(taskCompletion, subtaskProgress * 0.9);
+          break;
+        case "DONE":
+          taskCompletion = 1.0;
+          break;
+      }
     }
     completedWeight += weight * taskCompletion;
   }
@@ -73,6 +99,21 @@ export async function updateMilestoneProgress(milestoneId: string) {
       progress,
       completedAt: progress === 100 ? new Date() : null,
     },
+  });
+  
+  await cache.set(cacheKeys.milestoneProgress(milestoneId), progress, TTL.SHORT);
+  
+  console.timeEnd(`updateMilestoneProgress-${milestoneId}`);
+  return progress;
+}
+
+export function updateMilestoneProgressAsync(milestoneId: string) {
+  setImmediate(async () => {
+    try {
+      await updateMilestoneProgress(milestoneId);
+    } catch (error) {
+      console.error(`Failed to update milestone progress for ${milestoneId}:`, error);
+    }
   });
 }
 
@@ -119,14 +160,20 @@ export async function getTasksForMilestone(milestoneId: string, userId: string) 
       "MILESTONE_NOT_FOUND"
     );
   }
-  return prisma.task.findMany({
-    where: { milestoneId },
-    include: {
-      subtasks: { orderBy: { order: "asc" } },
-      _count: { select: { comments: true, timeEntries: true } },
-    },
-    orderBy: { order: "asc" },
-  });
+  
+  const cacheKey = `milestone:${milestoneId}:tasks:${userId}`;
+  return cacheOrFetch(
+    cacheKey,
+    () => prisma.task.findMany({
+      where: { milestoneId },
+      include: {
+        subtasks: { orderBy: { order: "asc" } },
+        _count: { select: { comments: true, timeEntries: true } },
+      },
+      orderBy: { order: "asc" },
+    }),
+    TTL.MEDIUM
+  );
 }
 
 export async function createTask(
@@ -199,6 +246,8 @@ export async function getTask(taskId: string, userId: string) {
 }
 
 export async function updateTask(taskId: string, userId: string, taskData: any) {
+  console.time(`updateTask-${taskId}`);
+  
   const existingTask = await verifyTaskOwnership(taskId, userId);
   const validatedData = updateTaskSchema.parse(taskData);
   
@@ -213,7 +262,11 @@ export async function updateTask(taskId: string, userId: string, taskData: any) 
     where: { id: taskId },
     data: updatePayload,
   });
-  await updateMilestoneProgress(existingTask.milestoneId);
+  
+  await invalidateCache.milestone(existingTask.milestoneId);
+  updateMilestoneProgressAsync(existingTask.milestoneId);
+  
+  console.timeEnd(`updateTask-${taskId}`);
   return updatedTask;
 }
 

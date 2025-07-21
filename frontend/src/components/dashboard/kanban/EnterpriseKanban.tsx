@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -8,6 +8,17 @@ import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Task } from '@/types';
+
+const throttle = <T extends unknown[]>(func: (...args: T) => void, limit: number) => {
+  let inThrottle: boolean;
+  return function executedFunction(...args: T) {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
 
 interface EnterpriseKanbanProps {
   tasks: Task[];
@@ -189,75 +200,85 @@ export default function EnterpriseKanban({ tasks, onTaskMove, onTaskClick }: Ent
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const activeCardRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (activeId) {
-        setMousePosition({ x: e.clientX, y: e.clientY });
+  const throttledMouseMove = useMemo(
+    () => throttle((e: MouseEvent) => {
+      if (!activeId) return;
+      setMousePosition({ x: e.clientX, y: e.clientY });
+      const newCardPosition = {
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+        width: cardPosition.width,
+        height: cardPosition.height
+      };
+      setCardPosition(newCardPosition);
+    }, 16),
+    [activeId, dragOffset, cardPosition.width, cardPosition.height]
+  );
+
+  const throttledColumnDetection = useMemo(
+    () => throttle((e: MouseEvent) => {
+      if (!activeId || Object.keys(columnBounds).length === 0) return;
+      let hoveredColumn = Object.entries(columnBounds).find(([, rect]) => {
+        if (!rect) return false;
+        return e.clientX >= rect.left &&
+               e.clientX <= rect.right &&
+               e.clientY >= rect.top &&
+               e.clientY <= rect.bottom;
+      });
+      
+      if (!hoveredColumn) {
+        let closestDistance = Infinity;
+        let closestColumn: [string, DOMRect | null] | null = null;
         
-        const newCardPosition = {
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
-          width: cardPosition.width,
-          height: cardPosition.height
-        };
-        setCardPosition(newCardPosition);
-        
-        if (Object.keys(columnBounds).length > 0) {
-          let hoveredColumn = Object.entries(columnBounds).find(([, rect]) => {
-            if (!rect) return false;
-            return e.clientX >= rect.left && 
-                   e.clientX <= rect.right && 
-                   e.clientY >= rect.top && 
-                   e.clientY <= rect.bottom;
-          });
+        Object.entries(columnBounds).forEach(([id, rect]) => {
+          if (!rect) return;
           
-          if (!hoveredColumn) {
-            let closestDistance = Infinity;
-            let closestColumn: [string, DOMRect | null] | null = null;
-            
-            Object.entries(columnBounds).forEach(([id, rect]) => {
-              if (!rect) return;
-              
-              const cardCenterX = newCardPosition.x + (newCardPosition.width / 2);
-              const cardCenterY = newCardPosition.y + (newCardPosition.height / 2);
-              
-              let distanceX = 0;
-              if (cardCenterX < rect.left) {
-                distanceX = rect.left - cardCenterX;
-              } else if (cardCenterX > rect.right) {
-                distanceX = cardCenterX - rect.right;
-              }
-              
-              let distanceY = 0;
-              if (cardCenterY < rect.top) {
-                distanceY = rect.top - cardCenterY;
-              } else if (cardCenterY > rect.bottom) {
-                distanceY = cardCenterY - rect.bottom;
-              }
-              
-              const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-              
-              if (distance < closestDistance) {
-                closestDistance = distance;
-                closestColumn = [id, rect];
-              }
-            });
-            
-            if (closestColumn && closestDistance < 150) {
-              hoveredColumn = closestColumn;
-            }
+          const cardCenterX = e.clientX - dragOffset.x + (cardPosition.width / 2);
+          const cardCenterY = e.clientY - dragOffset.y + (cardPosition.height / 2);
+          let distanceX = 0;
+          if (cardCenterX < rect.left) {
+            distanceX = rect.left - cardCenterX;
+          } else if (cardCenterX > rect.right) {
+            distanceX = cardCenterX - rect.right;
           }
           
-          setDragTarget(hoveredColumn ? hoveredColumn[0] : null);
+          let distanceY = 0;
+          if (cardCenterY < rect.top) {
+            distanceY = rect.top - cardCenterY;
+          } else if (cardCenterY > rect.bottom) {
+            distanceY = cardCenterY - rect.bottom;
+          }
+          
+          const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestColumn = [id, rect];
+          }
+        });
+        if (closestColumn && closestDistance < 150) {
+          hoveredColumn = closestColumn;
         }
       }
+      
+      setDragTarget(hoveredColumn ? hoveredColumn[0] : null);
+    }, 32),
+    [activeId, columnBounds, dragOffset, cardPosition.width, cardPosition.height]
+  );
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      throttledMouseMove(e);
+      throttledColumnDetection(e);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    if (activeId) {
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    }
+    
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [activeId, columnBounds, dragOffset, cardPosition.width, cardPosition.height]);
+  }, [activeId, throttledMouseMove, throttledColumnDetection]);
 
   useEffect(() => {
     const calculateColumnBounds = () => {
@@ -364,24 +385,26 @@ export default function EnterpriseKanban({ tasks, onTaskMove, onTaskClick }: Ent
     setDragTarget(null);
   };
 
-  const CustomDragOverlay = () => {
+  const dragStyles = useMemo((): React.CSSProperties => ({
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: `${cardPosition.width}px`,
+    height: `${cardPosition.height}px`,
+    pointerEvents: 'none',
+    zIndex: 9999,
+    transform: `translate3d(${mousePosition.x - dragOffset.x}px, ${mousePosition.y - dragOffset.y}px, 0)`,
+    opacity: 0.9,
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+    transition: 'none',
+    willChange: 'transform',
+    transformOrigin: '0 0',
+    backfaceVisibility: 'hidden',
+    perspective: 1000,
+  }), [cardPosition.width, cardPosition.height, mousePosition.x, mousePosition.y, dragOffset.x, dragOffset.y]);
+
+  const CustomDragOverlay = useCallback(() => {
     if (!activeId || !activeTask || !activeCardRef.current) return null;
-    
-    const dragStyles: React.CSSProperties = {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: `${cardPosition.width}px`,
-      height: `${cardPosition.height}px`,
-      pointerEvents: 'none',
-      zIndex: 9999,
-      transform: `translate3d(${mousePosition.x - dragOffset.x}px, ${mousePosition.y - dragOffset.y}px, 0)`,
-      opacity: 0.9,
-      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-      transition: 'none',
-      willChange: 'transform',
-      transformOrigin: '0 0',
-    };
     
     return createPortal(
       <div style={dragStyles} className="task-drag-overlay">
@@ -389,7 +412,7 @@ export default function EnterpriseKanban({ tasks, onTaskMove, onTaskClick }: Ent
       </div>,
       document.body
     );
-  };
+  }, [activeId, activeTask, dragStyles]);
 
   return (
     <div className="h-full flex flex-col">

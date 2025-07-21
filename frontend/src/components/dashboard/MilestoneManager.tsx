@@ -182,9 +182,11 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         if (result.success && Array.isArray(result.data)) {
           setTasks(result.data);
         } else {
+          console.error('Invalid milestone tasks response format:', result);
           setTasks([]);
         }
       } else {
+        console.error('Failed to fetch milestone tasks:', response.status, response.statusText);
         setTasks([]);
       }
     } catch (err) {
@@ -196,9 +198,28 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
   };
 
   const handleTaskMove = async (taskId: string, newStatus: Task['status']) => {
+    const originalTask = [...tasks, ...allTasks].find(task => task.id === taskId);
+    const originalStatus = originalTask?.status;
+    
+    if (!originalStatus) {
+      error('Task not found');
+      return;
+    }
+
+    const updateTaskStatus = (taskList: Task[]) =>
+      taskList.map(task =>
+        task.id === taskId
+          ? { ...task, status: newStatus, updatedAt: new Date().toISOString() }
+          : task
+      );
+
+    setTasks(updateTaskStatus);
+    setAllTasks(updateTaskStatus);
+
     try {
-      const token = api.getAccessToken();
+      performance.mark('task-update-start');
       
+      const token = api.getAccessToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks?id=${taskId}`, {
         method: 'PUT',
         headers: {
@@ -209,21 +230,44 @@ export default function MilestoneManager({ projectId }: MilestoneManagerProps) {
         body: JSON.stringify({ status: newStatus })
       });
 
+      performance.mark('task-update-end');
+      performance.measure('task-update-duration', 'task-update-start', 'task-update-end');
+      
+      const measure = performance.getEntriesByName('task-update-duration')[0];
+      console.log(`Task update took: ${measure.duration.toFixed(2)}ms`);
+
       if (response.ok) {
-        setTasks(prev => prev.map(task => 
-          task.id === taskId ? { ...task, status: newStatus } : task
-        ));
-        setAllTasks(prev => prev.map(task => 
-          task.id === taskId ? { ...task, status: newStatus } : task
-        ));
-        
         success('Task status updated!');
+        
+        setTimeout(() => {
+          fetchMilestones();
+          fetchStats();
+        }, 100);
       } else {
+        const rollbackTaskStatus = (taskList: Task[]) =>
+          taskList.map(task =>
+            task.id === taskId
+              ? { ...task, status: originalStatus }
+              : task
+          );
+        
+        setTasks(rollbackTaskStatus);
+        setAllTasks(rollbackTaskStatus);
         error('Failed to update task status');
       }
     } catch (err) {
       console.error('Error updating task status:', err);
-      error('An error occurred');
+      
+      const rollbackTaskStatus = (taskList: Task[]) =>
+        taskList.map(task =>
+          task.id === taskId
+            ? { ...task, status: originalStatus }
+            : task
+        );
+      
+      setTasks(rollbackTaskStatus);
+      setAllTasks(rollbackTaskStatus);
+      error('Network error occurred');
     }
   };
 

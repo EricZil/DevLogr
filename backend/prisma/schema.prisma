@@ -243,8 +243,10 @@ model Task {
   
   @@index([milestoneId])
   @@index([milestoneId, order])
+  @@index([milestoneId, status])
   @@index([status])
   @@index([assigneeId])
+  @@index([milestoneId, updatedAt])
   @@map("tasks")
 }
 
