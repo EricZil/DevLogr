@@ -90,8 +90,8 @@ export default function IssuesTab({ issues, projectSlug }: IssuesTabProps) {
         headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
-        const data = await res.json();
-        setCommentsMap(prev => ({ ...prev, [issueId]: data }));
+        const response = await res.json();
+        setCommentsMap(prev => ({ ...prev, [issueId]: response.data || [] }));
       }
     } catch (err) {
       console.error('Failed to fetch comments:', err);
@@ -405,5 +405,5 @@ export default function IssuesTab({ issues, projectSlug }: IssuesTabProps) {
       </div>
     </div>
   );
-} 
+}
 

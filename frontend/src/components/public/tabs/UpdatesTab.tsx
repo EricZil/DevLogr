@@ -139,7 +139,7 @@ export default function UpdatesTab({ updates = [] }: UpdatesTabProps) {
                           {update.type}
                         </span>
                       </div>
-                      <span className="text-sm text-zinc-400 bg-black/30 px-3 py-1 rounded-lg">{update.createdAt}</span>
+                      <span className="text-sm text-zinc-400 bg-black/30 px-3 py-1 rounded-lg">{new Date(update.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <MarkdownRenderer content={update.content} className="text-base" />
                     
