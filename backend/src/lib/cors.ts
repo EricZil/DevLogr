@@ -21,6 +21,10 @@ const corsMiddleware = cors({
       return callback(null, origin);
     }
     
+    if (origin === 'https://devlogr.space' || origin === 'http://devlogr.space') {
+      return callback(null, origin);
+    }
+    
     if (origin.includes('localhost')) {
       return callback(null, origin);
     }
@@ -59,13 +63,8 @@ export async function applyCors(
     
     const origin = req.headers.origin;
     if (origin) {
-      if (allowedOrigins.includes(origin) ||
-          origin.endsWith('.devlogr.space') ||
-          origin.includes('localhost') ||
-          origin.endsWith('.vercel.app') ||
-          origin === 'https://api.devlogr.space') {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-      }
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      console.log('CORS: Set Access-Control-Allow-Origin to:', origin);
     }
     
     if (req.method === 'OPTIONS') {
