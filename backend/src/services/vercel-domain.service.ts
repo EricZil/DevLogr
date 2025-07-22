@@ -165,6 +165,12 @@ export function getVercelDomainService(): VercelDomainService {
     const teamId = process.env.VERCEL_TEAM_ID;
     const frontendProjectId = process.env.VERCEL_FRONTEND_PROJECT_ID;
 
+    console.log('[VercelDomainService] Initializing with config:', {
+      hasToken: !!bearerToken,
+      teamId: teamId || 'none',
+      projectId: frontendProjectId || 'none'
+    });
+
     if (!bearerToken) {
       throw new Error('VERCEL_API_TOKEN environment variable is required');
     }
