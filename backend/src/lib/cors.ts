@@ -10,12 +10,26 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean); // Remove any undefined values
 
+console.log('CORS: Allowed origins:', allowedOrigins);
+console.log('CORS: FRONTEND_URL env var:', process.env.FRONTEND_URL);
+
 // Initialize CORS middleware with options
 const corsMiddleware = cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    console.log('CORS: Checking origin:', origin);
     
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log('CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
+    
+    // Temporarily allow all origins for debugging
+    console.log('CORS: Allowing origin for debugging:', origin);
+    return callback(null, origin);
+    
+    // Original logic (commented out for debugging)
+    /*
     // Check if the origin is in our allowed list
     if (allowedOrigins.some(allowedOrigin => allowedOrigin && origin.startsWith(allowedOrigin))) {
       return callback(null, origin);
@@ -42,6 +56,7 @@ const corsMiddleware = cors({
     // Log rejected origins for debugging
     console.log('CORS: Rejecting origin:', origin);
     callback(new Error('Not allowed by CORS'));
+    */
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   credentials: true,
@@ -80,18 +95,11 @@ export async function applyCors(
     
     // Ensure Access-Control-Allow-Origin is not '*' when credentials are included
     const origin = req.headers.origin;
+    console.log('CORS: Manual header setting for origin:', origin);
     if (origin) {
-      if (allowedOrigins.includes(origin) ||
-          origin.endsWith('.devlogr.space') ||
-          origin === 'https://devlogr.space' ||
-          origin === 'http://devlogr.space' ||
-          origin.includes('localhost') ||
-          origin.endsWith('.vercel.app') ||
-          origin === 'https://api.devlogr.space') {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-      } else {
-        console.log('CORS: Manual header check rejecting origin:', origin);
-      }
+      // Temporarily allow all origins for debugging
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      console.log('CORS: Set Access-Control-Allow-Origin to:', origin);
     }
     
     // Handle preflight OPTIONS requests properly

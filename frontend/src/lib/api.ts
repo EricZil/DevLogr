@@ -255,7 +255,7 @@ class ApiService {
     }> | null;
     publicUrl: string;
   }>> {
-    return this.makeRequest(`/projects/${projectId}?action=domain-status`);
+    return this.makeRequest(`/projects?id=${projectId}&action=domain-status`);
   }
 
   async verifyProjectDomain(projectId: string): Promise<ApiResponse<{
@@ -277,7 +277,7 @@ class ApiService {
       description: string;
     }>;
   }>> {
-    return this.makeRequest(`/projects/${projectId}?action=verify-domain`, {
+    return this.makeRequest(`/projects?id=${projectId}&action=verify-domain`, {
       method: 'POST',
     });
   }
