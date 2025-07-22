@@ -12,6 +12,7 @@ import FeedbackTab from '@/components/public/tabs/FeedbackTab';
 import IssueModal from '@/components/public/modals/IssueModal';
 import FeedbackModal from '@/components/public/modals/FeedbackModal';
 import PoweredByFooter from '@/components/public/PoweredByFooter';
+import RestrictedFeatureWrapper from '@/components/dashboard/RestrictedFeatureWrapper';
 import { ProjectData, Issue } from '@/types';
 
 export default function ProjectPage() {
@@ -93,13 +94,41 @@ export default function ProjectPage() {
       case 'overview':
         return <OverviewTab projectData={projectData} />;
       case 'milestones':
-        return <MilestonesTab milestones={projectData.milestones} />;
+        return (
+          <RestrictedFeatureWrapper
+            projectId={projectData.id}
+            featureName="Milestones"
+          >
+            <MilestonesTab milestones={projectData.milestones} />
+          </RestrictedFeatureWrapper>
+        );
       case 'updates':
-        return <UpdatesTab updates={projectData.updates} />;
+        return (
+          <RestrictedFeatureWrapper
+            projectId={projectData.id}
+            featureName="Updates"
+          >
+            <UpdatesTab updates={projectData.updates} />
+          </RestrictedFeatureWrapper>
+        );
       case 'issues':
-        return <IssuesTab issues={issues} projectSlug={slug} />;
+        return (
+          <RestrictedFeatureWrapper
+            projectId={projectData.id}
+            featureName="Issues"
+          >
+            <IssuesTab issues={issues} projectSlug={slug} />
+          </RestrictedFeatureWrapper>
+        );
       case 'feedback':
-        return <FeedbackTab feedback={projectData.feedback} />;
+        return (
+          <RestrictedFeatureWrapper
+            projectId={projectData.id}
+            featureName="Feedback"
+          >
+            <FeedbackTab feedback={projectData.feedback} />
+          </RestrictedFeatureWrapper>
+        );
       default:
         return <OverviewTab projectData={projectData} />;
     }

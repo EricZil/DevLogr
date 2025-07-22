@@ -9,6 +9,7 @@ import IssueManager from '@/components/dashboard/IssueManager';
 import FeedbackManager from '@/components/dashboard/FeedbackManager';
 import LoadingScreen from '@/components/shared/ui/LoadingScreen';
 import DomainSetupWizard from '@/components/dashboard/DomainSetupWizard';
+import RestrictedFeatureWrapper from '@/components/dashboard/RestrictedFeatureWrapper';
 
 interface Tag {
   id: string;
@@ -1304,27 +1305,43 @@ export default function ProjectManagement() {
         )}
 
         {activeTab === 'milestones' && (
-          <div className="max-w-6xl">
+          <RestrictedFeatureWrapper
+            projectId={projectId}
+            featureName="Milestones"
+            className="max-w-6xl"
+          >
             <MilestoneManager projectId={projectId} />
-          </div>
+          </RestrictedFeatureWrapper>
         )}
 
         {activeTab === 'updates' && (
-          <div className="max-w-6xl">
+          <RestrictedFeatureWrapper
+            projectId={projectId}
+            featureName="Updates"
+            className="max-w-6xl"
+          >
             <UpdateManager projectId={projectId} />
-          </div>
+          </RestrictedFeatureWrapper>
         )}
 
         {activeTab === 'issues' && project && (
-          <div className="max-w-6xl">
+          <RestrictedFeatureWrapper
+            projectId={project.id}
+            featureName="Issues"
+            className="max-w-6xl"
+          >
             <IssueManager projectId={project.id} />
-          </div>
+          </RestrictedFeatureWrapper>
         )}
 
         {activeTab === 'feedback' && project && (
-          <div className="max-w-6xl">
+          <RestrictedFeatureWrapper
+            projectId={project.id}
+            featureName="Feedback"
+            className="max-w-6xl"
+          >
             <FeedbackManager projectId={project.id} />
-          </div>
+          </RestrictedFeatureWrapper>
         )}
       </main>
 

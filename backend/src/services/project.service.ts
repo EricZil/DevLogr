@@ -3,6 +3,7 @@ import { AppError } from "../lib/error-handler";
 import { z } from "zod";
 import { promisify } from "util";
 import dns from "dns";
+import fetch from "node-fetch";
 
 const dnsLookupAsync = promisify(dns.lookup);
 const dnsResolveAsync = promisify(dns.resolve);
@@ -65,10 +66,72 @@ async function verifyProjectOwnership(projectId: string, userId: string) {
   return project;
 }
 
+async function verifyCustomDomainWithExternalDNS(domain: string): Promise<{
+  dnsResolved: boolean;
+  pointsToProxy: boolean;
+  hasCloudflare: boolean;
+  sslAvailable: boolean;
+  lastChecked: Date;
+} | null> {
+  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+  
+  try {
+    const dnsResponse = await fetch(`https://cloudflare-dns.com/dns-query?name=${cleanDomain}&type=A`, {
+      headers: { 'Accept': 'application/dns-json' },
+      timeout: 5000
+    });
+    
+    if (!dnsResponse.ok) {
+      throw new Error('External DNS lookup failed');
+    }
+    
+    const dnsData = await dnsResponse.json() as any;
+    const hasARecord = dnsData.Answer && dnsData.Answer.length > 0;
+    
+    const cnameResponse = await fetch(`https://cloudflare-dns.com/dns-query?name=${cleanDomain}&type=CNAME`, {
+      headers: { 'Accept': 'application/dns-json' },
+      timeout: 5000
+    });
+    
+    let pointsToProxy = false;
+    if (cnameResponse.ok) {
+      const cnameData = await cnameResponse.json() as any;
+      if (cnameData.Answer) {
+        pointsToProxy = cnameData.Answer.some((record: any) =>
+          record.data && (record.data.includes('devlogr.space') || record.data.includes('proxy.devlogr.space'))
+        );
+      }
+    }
+    
+    let hasCloudflare = false;
+    if (hasARecord && dnsData.Answer) {
+      const cloudflareIpRanges = [
+        '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
+        '104.24.', '104.25.', '104.26.', '104.27.', '104.28.', '104.29.', '104.30.', '104.31.',
+        '172.64.', '172.65.', '172.66.', '172.67.', '172.68.', '172.69.', '172.70.', '172.71.'
+      ];
+      hasCloudflare = dnsData.Answer.some((record: any) =>
+        record.data && cloudflareIpRanges.some(range => record.data.startsWith(range))
+      );
+    }
+    
+    return {
+      dnsResolved: hasARecord,
+      pointsToProxy,
+      hasCloudflare,
+      sslAvailable: pointsToProxy || hasCloudflare,
+      lastChecked: new Date()
+    };
+    
+  } catch (error) {
+    console.log('External DNS lookup failed, falling back to Node.js DNS:', error);
+    return null;
+  }
+}
+
 async function verifyCustomDomain(domain: string): Promise<DomainVerificationResult> {
   try {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
-    
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.([a-zA-Z]{2,}\.?)+$/;
     if (!domainRegex.test(cleanDomain)) {
       return {
@@ -85,45 +148,49 @@ async function verifyCustomDomain(domain: string): Promise<DomainVerificationRes
       };
     }
 
-    const details = {
-      dnsResolved: false,
-      pointsToProxy: false,
-      hasCloudflare: false,
-      sslAvailable: false,
-      lastChecked: new Date()
-    };
-
-    try {
-      const result = await dnsLookupAsync(cleanDomain);
-      details.dnsResolved = true;
-
-      try {
-        const proxyResult = await dnsLookupAsync('proxy.devlogr.space');
-        details.pointsToProxy = result.address === proxyResult.address;
-      } catch {
-        const cloudflareIpRanges = [
-          '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
-          '104.24.', '104.25.', '104.26.', '104.27.', '104.28.', '104.29.', '104.30.', '104.31.',
-          '172.64.', '172.65.', '172.66.', '172.67.', '172.68.', '172.69.', '172.70.', '172.71.'
-        ];
-        details.hasCloudflare = cloudflareIpRanges.some(range => result.address.startsWith(range));
-      }
+    let details = await verifyCustomDomainWithExternalDNS(cleanDomain);
+    
+    if (!details) {
+      details = {
+        dnsResolved: false,
+        pointsToProxy: false,
+        hasCloudflare: false,
+        sslAvailable: false,
+        lastChecked: new Date()
+      };
 
       try {
-        const cnameRecords = await dnsResolveAsync(cleanDomain, 'CNAME');
-        if (cnameRecords.some(record => record.includes('devlogr.space') || record.includes('proxy.devlogr.space'))) {
-          details.pointsToProxy = true;
+        const result = await dnsLookupAsync(cleanDomain);
+        details.dnsResolved = true;
+
+        try {
+          const proxyResult = await dnsLookupAsync('proxy.devlogr.space');
+          details.pointsToProxy = result.address === proxyResult.address;
+        } catch {
+          const cloudflareIpRanges = [
+            '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
+            '104.24.', '104.25.', '104.26.', '104.27.', '104.28.', '104.29.', '104.30.', '104.31.',
+            '172.64.', '172.65.', '172.66.', '172.67.', '172.68.', '172.69.', '172.70.', '172.71.'
+          ];
+          details.hasCloudflare = cloudflareIpRanges.some(range => result.address.startsWith(range));
         }
-      } catch {
-      }
 
-      if (details.pointsToProxy || details.hasCloudflare) {
-        details.sslAvailable = true;
-      }
+        try {
+          const cnameRecords = await dnsResolveAsync(cleanDomain, 'CNAME');
+          if (cnameRecords.some(record => record.includes('devlogr.space') || record.includes('proxy.devlogr.space'))) {
+            details.pointsToProxy = true;
+          }
+        } catch {
+        }
 
-    } catch (dnsError) {
-      console.log('DNS lookup failed for domain:', cleanDomain, dnsError);
-      details.dnsResolved = false;
+        if (details.pointsToProxy || details.hasCloudflare) {
+          details.sslAvailable = true;
+        }
+
+      } catch (dnsError) {
+        console.log('DNS lookup failed for domain:', cleanDomain, dnsError);
+        details.dnsResolved = false;
+      }
     }
 
     const isVerified = details.pointsToProxy || details.hasCloudflare;
