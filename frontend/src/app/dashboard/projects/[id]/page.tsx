@@ -66,12 +66,6 @@ export default function ProjectManagement() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
   // Domain management state
-  const [domainVerificationStatus, setDomainVerificationStatus] = useState<{
-    verified: boolean;
-    dns: boolean;
-    ssl: boolean;
-    error?: string;
-  } | null>(null);
   const [showDomainWizard, setShowDomainWizard] = useState(false);
   const router = useRouter();
   const params = useParams();
@@ -331,12 +325,6 @@ export default function ProjectManagement() {
       if (response.ok) {
         const responseData = await response.json();
         if (responseData.success && responseData.data) {
-          setDomainVerificationStatus({
-            verified: responseData.data.verified,
-            dns: responseData.data.dns,
-            ssl: responseData.data.ssl,
-            error: responseData.data.error
-          });
           if (responseData.data.verified) {
             setProject(prev => prev ? { ...prev, domainVerified: true, sslEnabled: responseData.data.ssl } : null);
             setToast({ message: 'Domain verified successfully!', type: 'success' });
