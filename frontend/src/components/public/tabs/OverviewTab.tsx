@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { ProjectData } from '@/types';
+import MarkdownRenderer from '@/components/shared/ui/MarkdownRenderer';
 
 interface OverviewTabProps {
   projectData: ProjectData;
@@ -203,9 +204,11 @@ export default function OverviewTab({ projectData }: OverviewTabProps) {
                           {update.type}
                         </span>
                       </div>
-                      <span className="text-sm text-zinc-400">{update.createdAt}</span>
+                      <span className="text-sm text-zinc-400">{new Date(update.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p className="text-zinc-300 leading-relaxed text-base">{update.content}</p>
+                    <div className="text-zinc-300 leading-relaxed text-base">
+                      <MarkdownRenderer content={update.content} />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -223,4 +226,4 @@ export default function OverviewTab({ projectData }: OverviewTabProps) {
       </div>
     </div>
   );
-} 
+}
