@@ -1,5 +1,6 @@
 import { Update } from '@/types';
 import Image from 'next/image';
+import MarkdownRenderer from '@/components/shared/ui/MarkdownRenderer';
 
 interface UpdatesTabProps {
   updates: Update[];
@@ -140,7 +141,7 @@ export default function UpdatesTab({ updates = [] }: UpdatesTabProps) {
                       </div>
                       <span className="text-sm text-zinc-400 bg-black/30 px-3 py-1 rounded-lg">{update.createdAt}</span>
                     </div>
-                    <p className="text-zinc-300 leading-relaxed text-base">{update.content}</p>
+                    <MarkdownRenderer content={update.content} className="text-base" />
                     
                     {update.images && update.images.length > 0 && (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
@@ -178,4 +179,4 @@ export default function UpdatesTab({ updates = [] }: UpdatesTabProps) {
       </div>
     </div>
   );
-} 
+}

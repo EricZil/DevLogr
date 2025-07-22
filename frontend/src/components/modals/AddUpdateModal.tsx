@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
+import RichTextEditor from '@/components/shared/ui/RichTextEditor';
 
 interface Update {
   id: string;
@@ -196,12 +197,11 @@ export default function AddUpdateModal({
 
                       <div>
                         <label className="block text-sm font-semibold text-zinc-300 mb-2">Update Content *</label>
-                        <textarea
+                        <RichTextEditor
                           value={newUpdate.content}
-                          onChange={(e) => setNewUpdate(prev => ({ ...prev, content: e.target.value }))}
-                          rows={12}
-                          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all resize-none"
+                          onChange={(value) => setNewUpdate(prev => ({ ...prev, content: value }))}
                           placeholder="Describe what you've accomplished, what you're working on, or any important announcements..."
+                          minHeight="300px"
                         />
                       </div>
                     </motion.div>
@@ -367,4 +367,4 @@ export default function AddUpdateModal({
       </div>
     </AnimatePresence>
   );
-} 
+}

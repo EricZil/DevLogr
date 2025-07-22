@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
 import { useNotification } from '@/contexts/NotificationContext';
+import MarkdownRenderer from '@/components/shared/ui/MarkdownRenderer';
 
 const AddUpdateModal = dynamic(
   () => import('@/components/modals/AddUpdateModal'),
@@ -378,7 +379,7 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
                         </button>
                       </div>
                     </div>
-                    <p className="text-zinc-300 leading-relaxed whitespace-pre-line">{u.content}</p>
+                    <MarkdownRenderer content={u.content} className="text-zinc-300 leading-relaxed" />
                   </div>
                 </div>
               </div>
@@ -388,4 +389,4 @@ export default function UpdateManager({ projectId }: UpdateManagerProps) {
       </div>
     </div>
   );
-} 
+}

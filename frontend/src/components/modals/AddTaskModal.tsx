@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
 import { Milestone } from '@/types';
+import RichTextEditor from '@/components/shared/ui/RichTextEditor';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -301,12 +302,11 @@ export default function AddTaskModal({
 
                       <div>
                         <label className="block text-sm font-semibold text-zinc-300 mb-2">Description</label>
-                        <textarea
+                        <RichTextEditor
                           value={newTask.description}
-                          onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                          rows={4}
-                          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all resize-none"
+                          onChange={(value) => setNewTask(prev => ({ ...prev, description: value }))}
                           placeholder="Describe the task requirements, acceptance criteria, and any additional context..."
+                          minHeight="200px"
                         />
                       </div>
 
@@ -611,4 +611,4 @@ export default function AddTaskModal({
       </div>
     </AnimatePresence>
   );
-} 
+}
