@@ -65,18 +65,18 @@ export default function ProjectsSection({
       </div>
 
       {projectsLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6 animate-pulse backdrop-blur-sm">
+            <div key={i} className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 animate-pulse">
               <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-white/10 rounded-lg"></div>
+                <div className="w-12 h-12 bg-zinc-700/50 rounded-xl"></div>
                 <div className="flex-1 space-y-3">
-                  <div className="h-5 bg-white/10 rounded w-48"></div>
-                  <div className="h-4 bg-white/10 rounded w-full"></div>
-                  <div className="h-3 bg-white/10 rounded w-3/4"></div>
+                  <div className="h-5 bg-zinc-700/50 rounded w-48"></div>
+                  <div className="h-4 bg-zinc-700/50 rounded w-full"></div>
+                  <div className="h-3 bg-zinc-700/50 rounded w-3/4"></div>
                   <div className="flex space-x-2">
-                    <div className="h-6 bg-white/10 rounded w-16"></div>
-                    <div className="h-6 bg-white/10 rounded w-20"></div>
+                    <div className="h-6 bg-zinc-700/50 rounded w-16"></div>
+                    <div className="h-6 bg-zinc-700/50 rounded w-20"></div>
                   </div>
                 </div>
               </div>
@@ -85,31 +85,31 @@ export default function ProjectsSection({
         </div>
       ) : projects.length === 0 ? (
         <div className="text-center py-16">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-12 backdrop-blur-sm">
-            <div className="w-16 h-16 mx-auto mb-6 bg-white/10 rounded-xl flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-12">
+            <div className="w-16 h-16 mx-auto mb-6 bg-zinc-800/50 rounded-xl flex items-center justify-center">
+              <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-white mb-3">Ready to Start Building?</h3>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            <p className="text-zinc-400 mb-8 max-w-md mx-auto">
               Create your first project and start tracking your development journey. Share progress, gather feedback, and build in public!
             </p>
-            <button 
+            <button
               onClick={onNewProject}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
             >
               Create Your First Project
             </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {projects.map((project) => (
             <div
               key={project.id}
               onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-              className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all cursor-pointer group backdrop-blur-sm"
+              className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 hover:bg-black/50 transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-start space-x-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
@@ -170,14 +170,14 @@ export default function ProjectsSection({
                     </div>
                   </div>
 
-                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                  <p className="text-zinc-400 text-sm mb-4 line-clamp-2">
                     {project.description || 'No description provided'}
                   </p>
 
                   <div className="flex items-center justify-between pt-4 border-t border-white/10">
                     <div className="flex flex-col space-y-2">
                       {project.lastUpdate && (
-                        <span className="flex items-center text-gray-400 text-sm">
+                        <span className="flex items-center text-zinc-400 text-sm">
                           <Clock className="w-4 h-4 mr-1" />
                           Last update: {new Date(project.lastUpdate).toLocaleDateString()}
                         </span>
@@ -229,7 +229,7 @@ export default function ProjectsSection({
                           e.stopPropagation();
                           router.push(`/dashboard/projects/${project.id}`);
                         }}
-                        className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
+                        className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-xl transition-colors"
                         title="View Project"
                       >
                         <Eye className="w-4 h-4" />
@@ -239,7 +239,7 @@ export default function ProjectsSection({
                           e.stopPropagation();
                           // todo implement archive
                         }}
-                        className="p-2 text-gray-400 hover:bg-white/10 rounded-lg transition-colors"
+                        className="p-2 text-zinc-400 hover:bg-zinc-700/50 rounded-xl transition-colors"
                         title="Archive Project"
                       >
                         <Archive className="w-4 h-4" />
@@ -252,13 +252,13 @@ export default function ProjectsSection({
                       {project.tags.slice(0, 3).map((tag: string, idx: number) => (
                         <span
                           key={idx}
-                          className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-md text-xs font-medium border border-blue-500/30"
+                          className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium border border-blue-500/30"
                         >
                           #{tag}
                         </span>
                       ))}
                       {project.tags.length > 3 && (
-                        <span className="px-2 py-1 bg-white/10 text-gray-400 rounded-md text-xs font-medium border border-white/20">
+                        <span className="px-3 py-1 bg-zinc-700/50 text-zinc-400 rounded-full text-xs font-medium border border-zinc-600/50">
                           +{project.tags.length - 3} more
                         </span>
                       )}

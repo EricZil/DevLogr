@@ -251,27 +251,29 @@ export default function Dashboard() {
 
   if (error && !user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="bg-red-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
-            <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-950 flex items-center justify-center">
+        <div className="text-center max-w-lg mx-auto p-8">
+          <div className="bg-gradient-to-br from-black/40 via-zinc-900/40 to-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-12">
+            <div className="bg-red-500/20 w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-red-500/30">
+              <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-semibold text-white mb-4">{error}</h3>
+            <button
+              onClick={() => router.push('/auth')}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-blue-500/25"
+            >
+              Back to Login
+            </button>
           </div>
-          <h3 className="text-xl font-semibold text-white mb-3">{error}</h3>
-          <button
-            onClick={() => router.push('/auth')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-          >
-            Back to Login
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-950">
       <DashboardHeader
         user={user}
         onLogout={handleLogout}
@@ -279,24 +281,26 @@ export default function Dashboard() {
         onNewProject={() => setIsProjectSetupOpen(true)}
       />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <WelcomeSection user={user} stats={stats} />
-        
-        <PerformanceMetrics stats={stats} updatesTrend={updatesTrend} />
+      <main className="max-w-7xl mx-auto px-8 py-10">
+        <div className="space-y-10">
+          <WelcomeSection user={user} stats={stats} />
+          
+          <PerformanceMetrics stats={stats} updatesTrend={updatesTrend} />
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <div className="xl:col-span-2">
-            <ProjectsSection
-              projects={projects}
-              projectsLoading={projectsLoading}
-              onNewProject={() => setIsProjectSetupOpen(true)}
-            />
-          </div>
-          <div className="xl:col-span-1">
-            <RecentUpdates
-              recentUpdates={recentUpdates}
-              updatesLoading={updatesLoading}
-            />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+            <div className="xl:col-span-2">
+              <ProjectsSection
+                projects={projects}
+                projectsLoading={projectsLoading}
+                onNewProject={() => setIsProjectSetupOpen(true)}
+              />
+            </div>
+            <div className="xl:col-span-1">
+              <RecentUpdates
+                recentUpdates={recentUpdates}
+                updatesLoading={updatesLoading}
+              />
+            </div>
           </div>
         </div>
       </main>

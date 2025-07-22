@@ -35,14 +35,12 @@ export default function PerformanceMetrics({ stats, updatesTrend }: PerformanceM
           title="Total Projects"
           value={stats ? stats.totalProjects.toString() : '0'}
           trend="+12%"
-          className="bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-sm"
         />
 
         <KpiCard
-          title="Active Projects" 
+          title="Active Projects"
           value={stats ? stats.activeProjects.toString() : '0'}
           trend="+8%"
-          className="bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-sm"
         />
 
         <KpiCard
@@ -50,14 +48,12 @@ export default function PerformanceMetrics({ stats, updatesTrend }: PerformanceM
           value={stats ? stats.totalUpdates.toString() : '0'}
           trend="+24%"
           sparklineData={updatesTrend}
-          className="bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-sm"
         />
 
         <KpiCard
           title="Avg Progress"
           value={`${stats ? stats.avgProgress : 0}%`}
           progress={stats ? stats.avgProgress : 0}
-          className="bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-sm"
         />
       </div>
     </section>
