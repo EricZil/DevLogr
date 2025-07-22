@@ -4,6 +4,7 @@ import { z } from "zod";
 import { promisify } from "util";
 import dns from "dns";
 import fetch from "node-fetch";
+import { getVercelDomainService } from './vercel-domain.service';
 
 // Enhanced DNS lookup with proper error handling
 const dnsLookupAsync = promisify(dns.lookup);
@@ -410,6 +411,35 @@ export async function createProject(userId: string, projectData: any) {
     },
   });
 
+  // Automatically add custom domain to Vercel project if provided
+  if (customDomain) {
+    try {
+      const vercelDomainService = getVercelDomainService();
+      const cleanDomain = customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+      
+      console.log(`[ProjectService] Automatically adding domain ${cleanDomain} to Vercel project`);
+      
+      // Check if domain is already in the Vercel project
+      const domainCheck = await vercelDomainService.isDomainInProject(cleanDomain);
+      
+      if (!domainCheck.exists) {
+        const result = await vercelDomainService.addDomainToProject(cleanDomain);
+        
+        if (result.success) {
+          console.log(`[ProjectService] Successfully added domain ${cleanDomain} to Vercel project`);
+        } else {
+          console.error(`[ProjectService] Failed to add domain ${cleanDomain} to Vercel:`, result.error);
+          // Don't fail project creation if Vercel domain addition fails
+        }
+      } else {
+        console.log(`[ProjectService] Domain ${cleanDomain} already exists in Vercel project`);
+      }
+    } catch (error) {
+      console.error(`[ProjectService] Error during automatic domain addition:`, error);
+      // Don't fail project creation if Vercel integration fails
+    }
+  }
+
   if (tags && tags.length > 0) {
     for (const tagName of tags) {
       let tag = await prisma.tag.findUnique({
@@ -812,10 +842,38 @@ export async function verifyProjectDomain(projectId: string, userId: string) {
     const verificationResult = await verifyCustomDomain(project.customDomain);
     
     if (verificationResult.isVerified) {
+      // Automatically verify domain on Vercel when DNS verification succeeds
+      try {
+        const vercelDomainService = getVercelDomainService();
+        const cleanDomain = project.customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+        
+        console.log(`[ProjectService] Automatically verifying domain ${cleanDomain} on Vercel`);
+        
+        // First ensure domain is added to Vercel project
+        const domainCheck = await vercelDomainService.isDomainInProject(cleanDomain);
+        if (!domainCheck.exists) {
+          console.log(`[ProjectService] Domain not in Vercel project, adding it first`);
+          await vercelDomainService.addDomainToProject(cleanDomain);
+        }
+        
+        // Now verify the domain on Vercel
+        const vercelResult = await vercelDomainService.verifyDomainOnProject(cleanDomain);
+        
+        if (vercelResult.success) {
+          console.log(`[ProjectService] Successfully verified domain ${cleanDomain} on Vercel`);
+        } else {
+          console.error(`[ProjectService] Failed to verify domain on Vercel:`, vercelResult.error);
+          // Continue with local verification even if Vercel verification fails
+        }
+      } catch (error) {
+        console.error(`[ProjectService] Error during automatic Vercel domain verification:`, error);
+        // Continue with local verification even if Vercel integration fails
+      }
+
       // Update the project to mark domain as verified
       await prisma.project.update({
         where: { id: projectId },
-        data: { 
+        data: {
           domainVerified: true,
           sslEnabled: verificationResult.details.sslAvailable
         }
@@ -823,8 +881,8 @@ export async function verifyProjectDomain(projectId: string, userId: string) {
 
       return {
         success: true,
-        data: { 
-          verified: true, 
+        data: {
+          verified: true,
           message: verificationResult.message,
           status: verificationResult.status,
           details: verificationResult.details

@@ -1,0 +1,173 @@
+import { Vercel } from "@vercel/sdk";
+
+interface VercelDomainConfig {
+  bearerToken: string;
+  teamId?: string;
+  frontendProjectId: string;
+}
+
+export class VercelDomainService {
+  private vercel: Vercel;
+  private config: VercelDomainConfig;
+
+  constructor(config: VercelDomainConfig) {
+    this.config = config;
+    this.vercel = new Vercel({
+      bearerToken: config.bearerToken,
+    });
+  }
+
+  /**
+   * Automatically add a custom domain to the Vercel frontend project
+   */
+  async addDomainToProject(domain: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log(`[VercelDomainService] Adding domain ${domain} to project ${this.config.frontendProjectId}`);
+
+      const result = await this.vercel.projects.addProjectDomain({
+        idOrName: this.config.frontendProjectId,
+        teamId: this.config.teamId,
+        requestBody: {
+          name: domain,
+          gitBranch: null, // Use production branch
+          redirect: null, // No redirect
+          redirectStatusCode: null,
+        },
+      });
+
+      console.log(`[VercelDomainService] Successfully added domain ${domain} to project`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[VercelDomainService] Error adding domain ${domain}:`, error);
+      return {
+        success: false,
+        error: `Error adding domain: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Remove a custom domain from the Vercel frontend project
+   */
+  async removeDomainFromProject(domain: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log(`[VercelDomainService] Removing domain ${domain} from project ${this.config.frontendProjectId}`);
+
+      const result = await this.vercel.projects.removeProjectDomain({
+        idOrName: this.config.frontendProjectId,
+        domain: domain,
+        teamId: this.config.teamId,
+      });
+
+      console.log(`[VercelDomainService] Successfully removed domain ${domain} from project`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[VercelDomainService] Error removing domain ${domain}:`, error);
+      return {
+        success: false,
+        error: `Error removing domain: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Verify a domain on the Vercel project (after DNS is configured)
+   */
+  async verifyDomainOnProject(domain: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log(`[VercelDomainService] Verifying domain ${domain} on project ${this.config.frontendProjectId}`);
+
+      const result = await this.vercel.projects.verifyProjectDomain({
+        idOrName: this.config.frontendProjectId,
+        domain: domain,
+        teamId: this.config.teamId,
+      });
+
+      console.log(`[VercelDomainService] Successfully verified domain ${domain} on project`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`[VercelDomainService] Error verifying domain ${domain}:`, error);
+      return {
+        success: false,
+        error: `Error verifying domain: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Get all domains for the Vercel project
+   */
+  async getProjectDomains(): Promise<{ success: boolean; domains?: any[]; error?: string }> {
+    try {
+      console.log(`[VercelDomainService] Getting domains for project ${this.config.frontendProjectId}`);
+
+      const result = await this.vercel.projects.getProjectDomains({
+        idOrName: this.config.frontendProjectId,
+        teamId: this.config.teamId,
+      });
+
+      console.log(`[VercelDomainService] Successfully retrieved project domains`);
+      return { success: true, domains: result.domains };
+
+    } catch (error) {
+      console.error(`[VercelDomainService] Error getting project domains:`, error);
+      return {
+        success: false,
+        error: `Error getting project domains: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Check if a domain is already added to the project
+   */
+  async isDomainInProject(domain: string): Promise<{ exists: boolean; error?: string }> {
+    try {
+      const result = await this.getProjectDomains();
+      
+      if (!result.success || !result.domains) {
+        return { exists: false, error: result.error };
+      }
+
+      const exists = result.domains.some(d => d.name === domain);
+      return { exists };
+
+    } catch (error) {
+      console.error(`[VercelDomainService] Error checking if domain exists:`, error);
+      return { 
+        exists: false, 
+        error: `Error checking domain existence: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      };
+    }
+  }
+}
+
+// Singleton instance
+let vercelDomainService: VercelDomainService | null = null;
+
+export function getVercelDomainService(): VercelDomainService {
+  if (!vercelDomainService) {
+    const bearerToken = process.env.VERCEL_API_TOKEN;
+    const teamId = process.env.VERCEL_TEAM_ID;
+    const frontendProjectId = process.env.VERCEL_FRONTEND_PROJECT_ID;
+
+    if (!bearerToken) {
+      throw new Error('VERCEL_API_TOKEN environment variable is required');
+    }
+
+    if (!frontendProjectId) {
+      throw new Error('VERCEL_FRONTEND_PROJECT_ID environment variable is required');
+    }
+
+    vercelDomainService = new VercelDomainService({
+      bearerToken,
+      teamId,
+      frontendProjectId,
+    });
+  }
+
+  return vercelDomainService;
+}
