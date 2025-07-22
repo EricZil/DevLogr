@@ -26,6 +26,11 @@ const corsMiddleware = cors({
       return callback(null, origin);
     }
     
+    // Allow devlogr.space itself
+    if (origin === 'https://devlogr.space' || origin === 'http://devlogr.space') {
+      return callback(null, origin);
+    }
+    
     if (origin.includes('localhost')) {
       return callback(null, origin);
     }
@@ -34,6 +39,8 @@ const corsMiddleware = cors({
       return callback(null, origin);
     }
     
+    // Log rejected origins for debugging
+    console.log('CORS: Rejecting origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -76,10 +83,14 @@ export async function applyCors(
     if (origin) {
       if (allowedOrigins.includes(origin) ||
           origin.endsWith('.devlogr.space') ||
+          origin === 'https://devlogr.space' ||
+          origin === 'http://devlogr.space' ||
           origin.includes('localhost') ||
           origin.endsWith('.vercel.app') ||
           origin === 'https://api.devlogr.space') {
         res.setHeader('Access-Control-Allow-Origin', origin);
+      } else {
+        console.log('CORS: Manual header check rejecting origin:', origin);
       }
     }
     

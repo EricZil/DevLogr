@@ -111,6 +111,7 @@ class ApiService {
       const response = await fetch(url, {
         ...options,
         headers,
+        credentials: 'include',
       });
 
       const data = await response.json();
@@ -130,6 +131,7 @@ class ApiService {
             const retryResponse = await fetch(url, {
               ...options,
               headers: retryHeaders,
+              credentials: 'include',
             });
             
             return retryResponse.json();
