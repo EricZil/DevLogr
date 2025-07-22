@@ -5,6 +5,125 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
 import { Task } from '@/types';
 
+// Import the markdown to HTML function from RichTextEditor
+const markdownToHtml = (markdown: string): string => {
+  if (!markdown) return '';
+  
+  let html = markdown;
+  
+  // First, handle code blocks to prevent interference with other formatting
+  const codeBlocks: string[] = [];
+  html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
+    const index = codeBlocks.length;
+    codeBlocks.push(`<pre class="bg-black/40 border border-white/10 rounded-lg p-4 overflow-x-auto my-4"><code class="text-green-400 text-sm font-mono">${code.trim()}</code></pre>`);
+    return `__CODE_BLOCK_${index}__`;
+  });
+  
+  // Handle inline code to prevent interference
+  const inlineCodes: string[] = [];
+  html = html.replace(/`([^`]+)`/g, (match, code) => {
+    const index = inlineCodes.length;
+    inlineCodes.push(`<code class="bg-black/40 text-green-400 px-1.5 py-0.5 rounded text-sm font-mono">${code}</code>`);
+    return `__INLINE_CODE_${index}__`;
+  });
+  
+  // Headers (process in reverse order to handle H6 before H1)
+  html = html.replace(/^#{6}\s+(.+)$/gm, '<h6 class="text-sm font-bold text-zinc-300 mt-4 mb-2">$1</h6>');
+  html = html.replace(/^#{5}\s+(.+)$/gm, '<h5 class="text-base font-bold text-zinc-300 mt-4 mb-2">$1</h5>');
+  html = html.replace(/^#{4}\s+(.+)$/gm, '<h4 class="text-lg font-bold text-zinc-200 mt-4 mb-2">$1</h4>');
+  html = html.replace(/^#{3}\s+(.+)$/gm, '<h3 class="text-xl font-bold text-zinc-100 mt-6 mb-3">$1</h3>');
+  html = html.replace(/^#{2}\s+(.+)$/gm, '<h2 class="text-2xl font-bold text-white mt-6 mb-4">$1</h2>');
+  html = html.replace(/^#{1}\s+(.+)$/gm, '<h1 class="text-3xl font-bold text-white mt-8 mb-4">$1</h1>');
+  
+  // Bold and italic (handle bold first to prevent conflicts)
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong class="font-bold text-white"><em class="italic">$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em class="italic text-zinc-300">$1</em>');
+  
+  // Strikethrough
+  html = html.replace(/~~(.+?)~~/g, '<del class="line-through text-zinc-400">$1</del>');
+  
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">$1</a>');
+  
+  // Blockquotes
+  html = html.replace(/^>\s+(.+)$/gm, '<blockquote class="border-l-4 border-blue-500/50 pl-4 py-2 my-4 bg-blue-500/10 text-zinc-300 italic">$1</blockquote>');
+  
+  // Horizontal rules
+  html = html.replace(/^---$/gm, '<hr class="border-t border-white/20 my-6" />');
+  
+  // Lists
+  html = html.replace(/^\s*[-*+]\s+(.+)$/gm, '<li class="text-zinc-300 mb-1">$1</li>');
+  html = html.replace(/^\s*\d+\.\s+(.+)$/gm, '<li class="text-zinc-300 mb-1">$1</li>');
+  
+  // Wrap consecutive list items in ul/ol tags
+  html = html.replace(/((<li class="text-zinc-300 mb-1">[^<]+<\/li>\s*)+)/g, '<ul class="list-disc list-inside space-y-1 my-4 ml-4">$1</ul>');
+  
+  // Restore code blocks and inline code
+  codeBlocks.forEach((block, index) => {
+    html = html.replace(`__CODE_BLOCK_${index}__`, block);
+  });
+  inlineCodes.forEach((code, index) => {
+    html = html.replace(`__INLINE_CODE_${index}__`, code);
+  });
+  
+  // Enhanced line break handling
+  const lines = html.split('\n');
+  const processedLines: string[] = [];
+  let inParagraph = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : '';
+    
+    // Skip empty lines
+    if (!line) {
+      if (inParagraph) {
+        processedLines.push('</p>');
+        inParagraph = false;
+      }
+      continue;
+    }
+    
+    // Check if line is a block element (headers, lists, blockquotes, etc.)
+    const isBlockElement = /^<(h[1-6]|ul|ol|li|blockquote|pre|hr)/.test(line) || line.includes('</h') || line.includes('</ul>') || line.includes('</ol>') || line.includes('</blockquote>') || line.includes('</pre>');
+    
+    if (isBlockElement) {
+      if (inParagraph) {
+        processedLines.push('</p>');
+        inParagraph = false;
+      }
+      processedLines.push(line);
+    } else {
+      // Regular text line
+      if (!inParagraph) {
+        processedLines.push('<p class="text-zinc-300 leading-relaxed mb-4">');
+        inParagraph = true;
+      }
+      
+      // Add line break if there's a next line and it's not empty
+      if (nextLine && !nextLine.startsWith('<')) {
+        processedLines.push(line + '<br />');
+      } else {
+        processedLines.push(line);
+      }
+    }
+  }
+  
+  // Close any open paragraph
+  if (inParagraph) {
+    processedLines.push('</p>');
+  }
+  
+  // Clean up extra breaks and empty paragraphs
+  html = processedLines.join('\n')
+    .replace(/<p class="[^"]*">\s*<\/p>/g, '') // Remove empty paragraphs
+    .replace(/<br \/>\s*<\/p>/g, '</p>') // Remove trailing breaks before closing paragraphs
+    .replace(/(<\/[^>]+>)\s*<br \/>/g, '$1'); // Remove breaks after closing tags
+  
+  return html;
+};
+
 interface TaskManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -441,7 +560,10 @@ export default function TaskManagementModal({
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3">Description</h3>
                           <div className="p-4 bg-black/20 border border-white/10 rounded-xl">
-                            <p className="text-zinc-300 leading-relaxed">{updatedTask.description}</p>
+                            <div 
+                              className="prose prose-invert max-w-none"
+                              dangerouslySetInnerHTML={{ __html: markdownToHtml(updatedTask.description) }}
+                            />
                           </div>
                         </div>
                       )}
@@ -737,4 +859,4 @@ export default function TaskManagementModal({
       </div>
     </AnimatePresence>
   );
-} 
+}
