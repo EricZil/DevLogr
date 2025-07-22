@@ -72,7 +72,7 @@ export async function updateMilestoneProgress(milestoneId: string) {
     let taskCompletion = statusWeights[task.status] || 0;
     
     if (task.subtasks.length > 0) {
-      const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+      const completedSubtasks = task.subtasks.filter((st: any) => st.completed).length;
       const subtaskProgress = completedSubtasks / task.subtasks.length;
       
       switch (task.status) {

@@ -20,6 +20,9 @@ importers:
       '@vercel/node':
         specifier: ^5.3.3
         version: 5.3.3
+      '@vercel/sdk':
+        specifier: ^1.10.0
+        version: 1.10.0(zod@3.25.74)
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -248,6 +251,16 @@ packages:
 
   '@vercel/node@5.3.3':
     resolution: {integrity: sha512-r+9vBv0JabLVwzfvS1sAl/M9FfRSzRt53rrj5Ge4ZSNEvrLCtw89Zs6zLipcVkHfYSDkDp6esNalHwyOdmPGRA==}
+
+  '@vercel/sdk@1.10.0':
+    resolution: {integrity: sha512-Z3bTFhDkQoEt2wviWxbvmkrkTPxVCYZaRlkV2Y3O/oRwVRnYiZ1tAK7NkjnSNtc19vARRkEAma/DfiaqVMlPzQ==}
+    hasBin: true
+    peerDependencies:
+      '@modelcontextprotocol/sdk': '>=1.5.0 <1.10.0'
+      zod: ^3
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
 
   '@vercel/static-config@3.1.1':
     resolution: {integrity: sha512-IRtKnm9N1Uqd2ayIbLPjRtdwcl1GTWvqF1PuEVNm9O43kmoI+m9VpGlW8oga+5LQq1LmJ2Y67zHr7NbjrH1rrw==}
@@ -1464,6 +1477,10 @@ snapshots:
       - encoding
       - rollup
       - supports-color
+
+  '@vercel/sdk@1.10.0(zod@3.25.74)':
+    dependencies:
+      zod: 3.25.74
 
   '@vercel/static-config@3.1.1':
     dependencies:

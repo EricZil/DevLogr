@@ -4,6 +4,7 @@ import { z } from "zod";
 import { promisify } from "util";
 import dns from "dns";
 import fetch from "node-fetch";
+import { getVercelDomainService } from './vercel-domain.service';
 
 const dnsLookupAsync = promisify(dns.lookup);
 const dnsResolveAsync = promisify(dns.resolve);
@@ -378,6 +379,31 @@ export async function createProject(userId: string, projectData: any) {
     },
   });
 
+  if (customDomain) {
+    try {
+      const vercelDomainService = getVercelDomainService();
+      const cleanDomain = customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+      
+      console.log(`[ProjectService] Automatically adding domain ${cleanDomain} to Vercel project`);
+      
+      const domainCheck = await vercelDomainService.isDomainInProject(cleanDomain);
+      
+      if (!domainCheck.exists) {
+        const result = await vercelDomainService.addDomainToProject(cleanDomain);
+        
+        if (result.success) {
+          console.log(`[ProjectService] Successfully added domain ${cleanDomain} to Vercel project`);
+        } else {
+          console.error(`[ProjectService] Failed to add domain ${cleanDomain} to Vercel:`, result.error);
+        }
+      } else {
+        console.log(`[ProjectService] Domain ${cleanDomain} already exists in Vercel project`);
+      }
+    } catch (error) {
+      console.error(`[ProjectService] Error during automatic domain addition:`, error);
+    }
+  }
+
   if (tags && tags.length > 0) {
     for (const tagName of tags) {
       let tag = await prisma.tag.findUnique({
@@ -601,7 +627,7 @@ export async function getPublicProjectBySlug(slug: string) {
 
   const processedProject = {
     ...project,
-    updates: project.updates.map(update => ({
+    updates: project.updates.map((update: any) => ({
       ...update,
       images: update.images ? 
         (() => {
@@ -709,7 +735,7 @@ export async function getPublicProjectByDomain(domain: string) {
 
   const processedProject = {
     ...project,
-    updates: project.updates.map(update => ({
+    updates: project.updates.map((update: any) => ({
       ...update,
       images: update.images ? 
         (() => {
@@ -774,9 +800,32 @@ export async function verifyProjectDomain(projectId: string, userId: string) {
     const verificationResult = await verifyCustomDomain(project.customDomain);
     
     if (verificationResult.isVerified) {
+      try {
+        const vercelDomainService = getVercelDomainService();
+        const cleanDomain = project.customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+        
+        console.log(`[ProjectService] Automatically verifying domain ${cleanDomain} on Vercel`);
+        
+        const domainCheck = await vercelDomainService.isDomainInProject(cleanDomain);
+        if (!domainCheck.exists) {
+          console.log(`[ProjectService] Domain not in Vercel project, adding it first`);
+          await vercelDomainService.addDomainToProject(cleanDomain);
+        }
+        
+        const vercelResult = await vercelDomainService.verifyDomainOnProject(cleanDomain);
+        
+        if (vercelResult.success) {
+          console.log(`[ProjectService] Successfully verified domain ${cleanDomain} on Vercel`);
+        } else {
+          console.error(`[ProjectService] Failed to verify domain on Vercel:`, vercelResult.error);
+        }
+      } catch (error) {
+        console.error(`[ProjectService] Error during automatic Vercel domain verification:`, error);
+      }
+
       await prisma.project.update({
         where: { id: projectId },
-        data: { 
+        data: {
           domainVerified: true,
           sslEnabled: verificationResult.details.sslAvailable
         }
@@ -784,8 +833,8 @@ export async function verifyProjectDomain(projectId: string, userId: string) {
 
       return {
         success: true,
-        data: { 
-          verified: true, 
+        data: {
+          verified: true,
           message: verificationResult.message,
           status: verificationResult.status,
           details: verificationResult.details

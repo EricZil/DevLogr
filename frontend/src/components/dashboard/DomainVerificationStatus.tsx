@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   CheckCircle, 
   XCircle, 
@@ -58,7 +58,7 @@ export default function DomainVerificationStatus({
     }
   };
 
-  const fetchDomainStatus = async () => {
+  const fetchDomainStatus = useCallback(async () => {
     try {
       const response = await api.getDomainVerificationStatus(projectId);
       if (response.success && response.data) {
@@ -71,7 +71,7 @@ export default function DomainVerificationStatus({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [projectId]);
 
   const handleVerifyDomain = async () => {
     if (!domainStatus?.customDomain) return;
@@ -201,9 +201,12 @@ export default function DomainVerificationStatus({
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-white">Verification Status</h4>
               <button
-                onClick={fetchDomainStatus}
+                onClick={() => {
+                  setIsLoading(true);
+                  fetchDomainStatus();
+                }}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-zinc-300 transition-colors"
+                className="flex items-center gap-2 px-3 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm text-zinc-300 transition-colors"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
