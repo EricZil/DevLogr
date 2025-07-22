@@ -1,5 +1,3 @@
-import { Vercel } from "@vercel/sdk";
-
 interface VercelDomainConfig {
   bearerToken: string;
   teamId?: string;
@@ -7,14 +5,22 @@ interface VercelDomainConfig {
 }
 
 export class VercelDomainService {
-  private vercel: Vercel;
+  private vercel: any;
   private config: VercelDomainConfig;
+  private initialized: boolean = false;
 
   constructor(config: VercelDomainConfig) {
     this.config = config;
-    this.vercel = new Vercel({
-      bearerToken: config.bearerToken,
-    });
+  }
+
+  private async initializeVercel() {
+    if (!this.initialized) {
+      const { Vercel } = await import("@vercel/sdk");
+      this.vercel = new Vercel({
+        bearerToken: this.config.bearerToken,
+      });
+      this.initialized = true;
+    }
   }
 
   /**
@@ -22,6 +28,7 @@ export class VercelDomainService {
    */
   async addDomainToProject(domain: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.initializeVercel();
       console.log(`[VercelDomainService] Adding domain ${domain} to project ${this.config.frontendProjectId}`);
 
       const result = await this.vercel.projects.addProjectDomain({
@@ -52,6 +59,7 @@ export class VercelDomainService {
    */
   async removeDomainFromProject(domain: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.initializeVercel();
       console.log(`[VercelDomainService] Removing domain ${domain} from project ${this.config.frontendProjectId}`);
 
       const result = await this.vercel.projects.removeProjectDomain({
@@ -77,6 +85,7 @@ export class VercelDomainService {
    */
   async verifyDomainOnProject(domain: string): Promise<{ success: boolean; error?: string }> {
     try {
+      await this.initializeVercel();
       console.log(`[VercelDomainService] Verifying domain ${domain} on project ${this.config.frontendProjectId}`);
 
       const result = await this.vercel.projects.verifyProjectDomain({
@@ -102,6 +111,7 @@ export class VercelDomainService {
    */
   async getProjectDomains(): Promise<{ success: boolean; domains?: any[]; error?: string }> {
     try {
+      await this.initializeVercel();
       console.log(`[VercelDomainService] Getting domains for project ${this.config.frontendProjectId}`);
 
       const result = await this.vercel.projects.getProjectDomains({
@@ -126,6 +136,7 @@ export class VercelDomainService {
    */
   async isDomainInProject(domain: string): Promise<{ exists: boolean; error?: string }> {
     try {
+      await this.initializeVercel();
       const result = await this.getProjectDomains();
       
       if (!result.success || !result.domains) {
@@ -137,9 +148,9 @@ export class VercelDomainService {
 
     } catch (error) {
       console.error(`[VercelDomainService] Error checking if domain exists:`, error);
-      return { 
-        exists: false, 
-        error: `Error checking domain existence: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      return {
+        exists: false,
+        error: `Error checking domain existence: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
