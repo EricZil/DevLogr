@@ -29,7 +29,7 @@ export default function Footer() {
                 DevLogr is eating its own dog food! Follow the development of this platform in real-time on our public project page.
               </p>
               <a 
-                href="https://devlogr.devlogr.space/" 
+                href="https://roadmap.devlogr.space/" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"

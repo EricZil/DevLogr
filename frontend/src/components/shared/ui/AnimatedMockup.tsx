@@ -462,7 +462,7 @@ export default function AnimatedMockup() {
 
       <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
         <a 
-          href="https://devlogr.devlogr.space/" 
+          href="https://roadmap.devlogr.space/" 
           target="_blank" 
           rel="noopener noreferrer"
           className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-8 py-3 rounded-full font-semibold text-sm lg:text-base hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 flex items-center space-x-2"
