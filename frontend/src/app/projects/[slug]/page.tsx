@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import ProjectHeader from '@/components/public/ProjectHeader';
-import ProjectTabs from '@/components/public/ProjectTabs';
+import { LayoutProvider } from '@/contexts/LayoutContext';
+import LayoutWrapper from '@/components/public/layouts/LayoutWrapper';
 import OverviewTab from '@/components/public/tabs/OverviewTab';
 import UpdatesTab from '@/components/public/tabs/UpdatesTab';
 import MilestonesTab from '@/components/public/tabs/MilestonesTab';
@@ -11,7 +11,6 @@ import IssuesTab from '@/components/public/tabs/IssuesTab';
 import FeedbackTab from '@/components/public/tabs/FeedbackTab';
 import IssueModal from '@/components/public/modals/IssueModal';
 import FeedbackModal from '@/components/public/modals/FeedbackModal';
-import PoweredByFooter from '@/components/public/PoweredByFooter';
 import RestrictedFeatureWrapper from '@/components/dashboard/RestrictedFeatureWrapper';
 import { ProjectData, Issue } from '@/types';
 
@@ -195,67 +194,35 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-purple-900/10 to-pink-900/10"></div>
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-[32rem] h-[32rem] bg-purple-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
-
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
-          `,
-          backgroundSize: '100px 100px'
-        }} />
-      </div>
-
-      <div className="relative z-10">
-        <ProjectHeader 
-          projectData={projectData}
-          subdomain={slug}
-          onIssueClick={() => setIsIssueModalOpen(true)}
-          onFeedbackClick={() => setIsFeedbackModalOpen(true)}
-          allowIssues={projectData.allowIssues}
-          allowFeedback={projectData.allowFeedback}
-        />
-
-        <ProjectTabs 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          issueCount={issues.length}
-          feedbackCount={projectData.feedback?.length || 0}
-          milestoneCount={projectData.milestones?.length || 0}
-          updateCount={projectData.updates?.length || 0}
-          allowIssues={projectData.allowIssues}
-          allowFeedback={projectData.allowFeedback}
-        />
-
-        <div className="relative">
+    <LayoutProvider initialLayout="default" projectId={projectData.id}>
+      <LayoutWrapper
+        projectData={projectData}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onIssueClick={() => setIsIssueModalOpen(true)}
+        onFeedbackClick={() => setIsFeedbackModalOpen(true)}
+      >
         {renderTabContent()}
-        </div>
-        <PoweredByFooter />
-        {projectData.allowIssues && (
-          <IssueModal 
-            isOpen={isIssueModalOpen}
-            onClose={() => setIsIssueModalOpen(false)}
-            projectTitle={projectData.title}
-            projectSlug={slug}
-            onIssueCreated={handleIssueCreated}
-          />
-        )}
-        
-        {projectData.allowFeedback && (
-          <FeedbackModal 
-            isOpen={isFeedbackModalOpen}
-            onClose={() => setIsFeedbackModalOpen(false)}
-            projectTitle={projectData.title}
-            projectSlug={slug}
-          />
-        )}
-      </div>
-    </div>
+      </LayoutWrapper>
+
+      {projectData.allowIssues && (
+        <IssueModal
+          isOpen={isIssueModalOpen}
+          onClose={() => setIsIssueModalOpen(false)}
+          projectTitle={projectData.title}
+          projectSlug={slug}
+          onIssueCreated={handleIssueCreated}
+        />
+      )}
+      
+      {projectData.allowFeedback && (
+        <FeedbackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => setIsFeedbackModalOpen(false)}
+          projectTitle={projectData.title}
+          projectSlug={slug}
+        />
+      )}
+    </LayoutProvider>
   );
 } 

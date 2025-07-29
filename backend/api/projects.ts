@@ -16,6 +16,7 @@ import {
   verifyProjectDomain,
   getDomainVerificationStatus,
 } from "../src/services/project.service";
+import { LayoutService } from "../src/services/layout.service";
 import {
   getTasksForProject,
 } from "../src/services/task.service";
@@ -113,6 +114,91 @@ export default async function handler(
       } else {
         return res.status(400).json({ success: false, error: "Either slug or domain parameter is required" });
       }
+    }
+
+    if (action === 'layouts') {
+      const { subaction } = req.query;
+
+      if (subaction === 'themes') {
+        if (req.method !== "GET") {
+          res.setHeader("Allow", ["GET"]);
+          return res.status(405).json({ error: "Method not allowed" });
+        }
+
+        const themesResult = await LayoutService.getLayoutThemes();
+        return res.status(themesResult.success ? 200 : 400).json(themesResult);
+      }
+
+      if (subaction === 'initialize') {
+        if (req.method !== "GET") {
+          res.setHeader("Allow", ["GET"]);
+          return res.status(405).json({ error: "Method not allowed" });
+        }
+
+        const initResult = await LayoutService.initializeDefaultThemes();
+        return res.status(initResult.success ? 200 : 400).json(initResult);
+      }
+
+      if (typeof id !== "string") {
+        return res.status(400).json({ success: false, error: "Project ID is required for this layout operation" });
+      }
+
+      const userId = getUserIdFromToken(req);
+
+      if (subaction === 'project') {
+        if (req.method !== "GET") {
+          res.setHeader("Allow", ["GET"]);
+          return res.status(405).json({ error: "Method not allowed" });
+        }
+
+        const projectLayoutResult = await LayoutService.getProjectLayout(id);
+        return res.status(projectLayoutResult.success ? 200 : 400).json(projectLayoutResult);
+      }
+
+      if (subaction === 'create-theme') {
+        if (req.method !== "POST") {
+          res.setHeader("Allow", ["POST"]);
+          return res.status(405).json({ error: "Method not allowed" });
+        }
+
+        const { name, description, type, config } = req.body;
+
+        if (!name || !type || !config) {
+          return res.status(400).json({
+            success: false,
+            error: 'Name, type, and config are required'
+          });
+        }
+
+        const createResult = await LayoutService.createLayoutTheme(name, description, type, config);
+        return res.status(createResult.success ? 201 : 400).json(createResult);
+      }
+
+      if (subaction === 'update-project') {
+        if (req.method !== "PUT") {
+          res.setHeader("Allow", ["PUT"]);
+          return res.status(405).json({ error: "Method not allowed" });
+        }
+
+        const { layoutConfig, themeConfig } = req.body;
+
+        if (!layoutConfig) {
+          return res.status(400).json({
+            success: false,
+            error: 'Layout config is required'
+          });
+        }
+
+        const updateResult = await LayoutService.updateProjectLayout(
+          id,
+          userId,
+          layoutConfig,
+          themeConfig
+        );
+        return res.status(updateResult.success ? 200 : 400).json(updateResult);
+      }
+
+      return res.status(400).json({ success: false, error: "Invalid layout action" });
     }
 
     if (typeof id !== "string") {

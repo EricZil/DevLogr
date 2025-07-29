@@ -78,7 +78,7 @@ class ApiService {
       }
       
       return false;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

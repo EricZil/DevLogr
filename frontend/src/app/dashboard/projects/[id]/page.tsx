@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { LayoutProvider } from '@/contexts/LayoutContext';
 import MilestoneManager from '@/components/dashboard/MilestoneManager';
 import UpdateManager from '@/components/dashboard/UpdateManager';
 import IssueManager from '@/components/dashboard/IssueManager';
 import FeedbackManager from '@/components/dashboard/FeedbackManager';
+import LayoutSettings from '@/components/dashboard/LayoutSettings';
 import LoadingScreen from '@/components/shared/ui/LoadingScreen';
 import DomainSetupWizard from '@/components/dashboard/DomainSetupWizard';
 import DomainVerificationStatus from '@/components/dashboard/DomainVerificationStatus';
@@ -394,7 +396,8 @@ export default function ProjectManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <LayoutProvider projectId={projectId}>
+      <div className="min-h-screen bg-black relative overflow-hidden">
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-purple-900/10 to-pink-900/10"></div>
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div>
@@ -1027,6 +1030,45 @@ export default function ProjectManagement() {
               </div>
             </div>
 
+            <LayoutSettings
+              projectId={projectId}
+              projectData={project ? {
+                id: project.id,
+                name: project.title,
+                title: project.title,
+                description: project.description,
+                slug: project.slug,
+                status: project.status,
+                progress: project.progress,
+                visibility: project.visibility,
+                icon: project.icon,
+                color: project.theme,
+                githubUrl: null,
+                twitterUrl: null,
+                websiteUrl: null,
+                allowIssues: project.allowIssues || false,
+                allowFeedback: project.allowFeedback || false,
+                createdAt: project.createdAt,
+                updatedAt: project.updatedAt,
+                lastUpdate: project.updatedAt,
+                customDomain: project.customDomain,
+                domainVerified: project.domainVerified,
+                sslEnabled: project.sslEnabled,
+                user: project.user,
+                tags: [],
+                updates: [],
+                milestones: [],
+                issues: [],
+                feedback: [],
+                _count: {
+                  updates: 0,
+                  milestones: 0,
+                  issues: 0,
+                  feedback: 0
+                }
+              } : undefined}
+            />
+
             <DomainVerificationStatus
               projectId={projectId}
               onVerificationChange={(verified) => {
@@ -1116,5 +1158,6 @@ export default function ProjectManagement() {
         />
       )}
     </div>
+    </LayoutProvider>
   );
-} 
+}
